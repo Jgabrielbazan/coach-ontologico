@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#14121f" />
+    <meta name="description" content="Coach ontológico por voz en tiempo real." />
+    <title>Coach Ontológico</title>
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icono.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icono.svg" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="cabecera">
+        <div>
+          <p class="etiqueta" id="etiqueta-nivel">Nivel 1 de 3</p>
+          <h1 id="nombre-nivel">El Observador Inicial</h1>
+        </div>
+        <ol class="progreso" id="progreso" aria-label="Progreso del programa">
+          <li data-nivel="1"></li>
+          <li data-nivel="2"></li>
+          <li data-nivel="3"></li>
+        </ol>
+      </header>
+
+      <section class="centro">
+        <button class="orbe" id="boton-principal" type="button" aria-live="polite">
+          <span class="orbe-texto" id="texto-boton">Empezar sesión</span>
+        </button>
+        <p class="estado" id="estado" role="status">Toca para hablar con tu coach</p>
+        <video id="vista-camara" class="vista-camara" playsinline muted hidden></video>
+      </section>
+
+      <section class="subtitulos" id="subtitulos" aria-label="Transcripción" aria-live="polite" hidden></section>
+
+      <nav class="controles" id="controles" hidden>
+        <button type="button" id="boton-silencio" class="control" aria-pressed="false">Silenciar micrófono</button>
+        <button type="button" id="boton-camara" class="control" aria-pressed="false">Activar cámara</button>
+        <button type="button" id="boton-subtitulos" class="control" aria-pressed="false">Ver texto</button>
+      </nav>
+
+      <footer class="pie">
+        <p id="ultimo-feedback" class="feedback" hidden></p>
+        <button type="button" id="boton-reiniciar" class="enlace">Reiniciar programa</button>
+      </footer>
+    </main>
+
+    <dialog id="dialogo-clave">
+      <form method="dialog" id="formulario-clave">
+        <h2>Contraseña</h2>
+        <p>Escribe la contraseña configurada en el servidor (APP_PASSWORD).</p>
+        <input type="password" id="campo-clave" autocomplete="current-password" required />
+        <button type="submit" class="control">Entrar</button>
+      </form>
+    </dialog>
+
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>
