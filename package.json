@@ -2,23 +2,24 @@
   "name": "coach-ontologico",
   "version": "0.1.0",
   "private": true,
-  "description": "Coach ontológico por voz en tiempo real (Gemini Live). App personal para PC y móvil.",
+  "description": "Coach ontológico por voz en tiempo real (Gemini Live). App personal para PC y móvil con progreso compartido en Firebase.",
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "start": "node --env-file-if-exists=.env server/index.js",
     "dev": "vite",
-    "dev:server": "node --watch --env-file-if-exists=.env server/index.js",
-    "test": "node --test"
+    "emuladores": "npm run build && firebase emulators:start",
+    "deploy": "firebase deploy",
+    "test": "npm --prefix functions test"
   },
   "engines": {
     "node": ">=22"
   },
   "dependencies": {
     "@google/genai": "^2.29.1",
-    "express": "^5.1.0"
+    "firebase": "^13.0.0"
   },
   "devDependencies": {
+    "firebase-tools": "^15.33.0",
     "vite": "^7.1.0"
   }
 }

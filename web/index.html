@@ -12,7 +12,17 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <main class="app">
+    <main class="app entrar" id="pantalla-entrar">
+      <div class="marca">
+        <img src="/icono.svg" alt="" width="96" height="96" />
+        <h1>Coach Ontológico</h1>
+        <p>Tu coach por voz. Entra con tu cuenta de Google y sigue donde lo dejaste, en la PC o en el móvil.</p>
+      </div>
+      <button type="button" class="boton-google" id="boton-entrar">Entrar con Google</button>
+      <p class="error" id="error-entrar" role="alert" hidden></p>
+    </main>
+
+    <main class="app" id="pantalla-coach" hidden>
       <header class="cabecera">
         <div>
           <p class="etiqueta" id="etiqueta-nivel">Nivel 1 de 3</p>
@@ -43,18 +53,13 @@
 
       <footer class="pie">
         <p id="ultimo-feedback" class="feedback" hidden></p>
-        <button type="button" id="boton-reiniciar" class="enlace">Reiniciar programa</button>
+        <p class="cuenta">
+          <span id="cuenta"></span> ·
+          <button type="button" id="boton-salir" class="enlace">Cerrar sesión</button> ·
+          <button type="button" id="boton-reiniciar" class="enlace">Reiniciar programa</button>
+        </p>
       </footer>
     </main>
-
-    <dialog id="dialogo-clave">
-      <form method="dialog" id="formulario-clave">
-        <h2>Contraseña</h2>
-        <p>Escribe la contraseña configurada en el servidor (APP_PASSWORD).</p>
-        <input type="password" id="campo-clave" autocomplete="current-password" required />
-        <button type="submit" class="control">Entrar</button>
-      </form>
-    </dialog>
 
     <script type="module" src="./main.js"></script>
   </body>

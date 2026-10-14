@@ -238,30 +238,52 @@ h1 {
   padding: 8px;
 }
 
-dialog {
-  border: 1px solid var(--borde);
-  border-radius: 16px;
-  background: var(--superficie);
-  color: var(--texto);
-  padding: 20px;
-  width: min(92vw, 360px);
+.entrar {
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  gap: 28px;
 }
 
-dialog::backdrop {
-  background: rgb(0 0 0 / 0.6);
+.marca h1 {
+  margin: 16px 0 8px;
+  font-size: 1.8rem;
 }
 
-dialog h2 {
-  margin: 0 0 8px;
+.marca p {
+  margin: 0 auto;
+  max-width: 34ch;
+  color: var(--texto-suave);
+  line-height: 1.5;
 }
 
-dialog input {
-  width: 100%;
-  margin: 12px 0;
-  padding: 12px;
-  border-radius: 10px;
-  border: 1px solid var(--borde);
-  background: var(--fondo);
-  color: var(--texto);
+.boton-google {
+  min-height: 52px;
+  padding: 12px 28px;
+  border-radius: 999px;
+  border: none;
+  background: var(--texto);
+  color: var(--fondo);
   font: inherit;
+  font-weight: 650;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.boton-google:focus-visible {
+  outline: 3px solid var(--acento-2);
+  outline-offset: 4px;
+}
+
+.error {
+  margin: 0;
+  color: var(--peligro);
+  max-width: 40ch;
+}
+
+.cuenta {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--texto-suave);
+  text-align: center;
 }

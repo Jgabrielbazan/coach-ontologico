@@ -1,5 +1,11 @@
 node_modules/
 dist/
-data/
 .env
+.env.local
 *.log
+.firebase/
+functions/.env
+functions/.secret.local
+firebase-debug.log
+firestore-debug.log
+ui-debug.log

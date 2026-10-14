@@ -1,0 +1,12 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Cada usuario solo puede leer su propio progreso. Las escrituras las hacen
+    // únicamente las Cloud Functions (que aplican las reglas de los niveles).
+    match /usuarios/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
+    }
+  }
+}

@@ -1,8 +1,8 @@
 # Coach Ontológico
 
-App personal de coaching ontológico **por voz en tiempo real**, para PC y móvil.
-Hablas con el coach como en una llamada: te enseña un concepto por vez, te pone
-ejercicios y te evalúa en tres niveles. Tu progreso queda guardado entre sesiones.
+App personal de coaching ontológico **por voz en tiempo real**. La misma app funciona
+en la PC y en el móvil, cada una por su cuenta. Entras con tu cuenta de Google y
+**comparten el progreso**: si avanzas en el móvil, la PC lo muestra al instante.
 
 | Nivel | Nombre | Qué se trabaja |
 |---|---|---|
@@ -12,84 +12,117 @@ ejercicios y te evalúa en tres niveles. Tu progreso queda guardado entre sesion
 
 ## Cómo funciona
 
-- **Voz:** Gemini Live (Google), conversación de voz a voz con baja latencia. Puedes
-  interrumpir al coach mientras habla.
-- **Tu clave de Google nunca llega al navegador:** el servidor crea un token temporal
-  de un solo uso para cada sesión.
-- **Progreso:** se guarda en `data/progreso.json` en tu PC. Es el **servidor** quien
-  decide si subes de nivel (aprobado + puntuación mínima de 70), no el modelo solo.
-- **Memoria:** al terminar cada sesión el coach guarda un resumen, y la siguiente vez
-  retoma desde ahí.
-- **Cámara (nivel 3):** manda una foto por segundo para que el coach vea tu postura.
+```
+ PC (app instalada)        Móvil (app instalada)
+        └──── Entrar con Google ────┘
+                     │
+            Firebase (Google)
+            • Hosting: publica la app
+            • Auth: tu cuenta de Google (solo tu correo tiene acceso)
+            • Firestore: tu progreso, sincronizado en vivo
+            • Functions: crean el token de Gemini y aplican las reglas de los niveles
+                     │
+            Gemini Live: la conversación de voz va directo del aparato a Google
+```
 
-## Puesta en marcha (en tu PC)
+- **Tu clave de Gemini nunca llega al aparato:** la guarda Firebase como secreto y la
+  función `crearSesion` entrega un token temporal de un solo uso por sesión.
+- **Solo tu cuenta:** las funciones rechazan cualquier correo distinto de
+  `EMAIL_PERMITIDO`, y la base de datos solo deja leer tu propio progreso.
+- **Niveles justos:** el servidor decide si subes (aprobado + mínimo 70/100).
+- **Memoria:** al cerrar cada sesión el coach guarda un resumen y la siguiente retoma desde ahí.
+
+## Puesta en marcha (una sola vez)
 
 Necesitas **Node.js 22 o superior** ([nodejs.org](https://nodejs.org)).
+
+### 1. Crear el proyecto en Firebase
+
+1. Entra a [console.firebase.google.com](https://console.firebase.google.com) →
+   **Crear un proyecto** (por ejemplo `coach-ontologico`). Google Analytics no hace falta.
+2. **Actualizar al plan Blaze** (abajo a la izquierda). Lo exigen las Functions.
+   Para uso personal el gasto de Firebase es prácticamente cero; pon un
+   **presupuesto con alerta** (por ejemplo 5 USD) en la consola de facturación.
+3. **Authentication** → Comenzar → **Google** → Habilitar → Guardar.
+4. **Firestore Database** → Crear base de datos → modo producción → la región que
+   prefieras (por ejemplo `southamerica-east1` o `us-central1`).
+5. **Configuración del proyecto → Tus apps → Web (`</>`)** → registra una app web
+   (sin marcar Hosting). Solo hace falta que exista.
+
+### 2. Preparar el código
 
 ```bash
 git clone https://github.com/Jgabrielbazan/coach-ontologico.git
 cd coach-ontologico
 npm install
+npm --prefix functions install
+npx firebase login
+npx firebase use --add          # elige tu proyecto y ponle el alias "default"
 ```
 
-Copia `.env.example` como `.env` y pon tu clave de Google AI Studio
-([aistudio.google.com/apikey](https://aistudio.google.com/apikey)):
+Crea `functions/.env` copiando `functions/.env.example` y pon tu correo:
 
 ```
-GEMINI_API_KEY=tu-clave
-APP_PASSWORD=una-contraseña
+EMAIL_PERMITIDO=tu-correo@gmail.com
 ```
 
-Después:
+Guarda la clave de Google AI Studio como secreto (te la pedirá por consola, no
+queda en ningún archivo):
 
 ```bash
-npm run build
-npm start
+npx firebase functions:secrets:set GEMINI_API_KEY
 ```
 
-Abre **http://localhost:3000** en Chrome o Edge, toca **Empezar sesión** y permite el
-micrófono. Con auriculares la conversación fluye mejor (evitas que el coach se
-escuche a sí mismo).
-
-## Usarla desde el móvil
-
-El navegador solo permite el micrófono en páginas **https** (o en `localhost`).
-La forma más simple es un túnel seguro gratuito de Cloudflare, con la app corriendo
-en tu PC:
+### 3. Publicar
 
 ```bash
-npx cloudflared tunnel --url http://localhost:3000
+npm run deploy
 ```
 
-Te dará una dirección `https://…trycloudflare.com`. Ábrela en el móvil, entra con tu
-`APP_PASSWORD` y, desde el menú del navegador, elige **Añadir a pantalla de inicio**
-para tenerla como app. **Pon siempre `APP_PASSWORD`** antes de abrir el túnel: la
-dirección es pública.
+Al terminar te muestra la dirección de la app: `https://TU-PROYECTO.web.app`.
 
-Tu progreso sigue guardado en el PC, así que es el mismo desde los dos dispositivos.
-La dirección del túnel cambia cada vez que lo abres; para una fija hace falta una
-cuenta de Cloudflare o publicar la app en un hosting.
+## Instalarla en la PC y en el móvil
 
-## Configuración opcional (`.env`)
+- **PC (Chrome o Edge):** abre la dirección → icono de instalar en la barra de
+  direcciones → **Instalar**.
+- **Android (Chrome):** abre la dirección → menú ⋮ → **Instalar app** (o *Añadir a
+  pantalla de inicio*).
+- **iPhone (Safari):** compartir → **Añadir a pantalla de inicio**.
+
+En cada aparato entra con tu cuenta de Google. Con auriculares la conversación fluye
+mejor.
+
+## Actualizar
+
+Cada vez que cambie el código: `git pull` y `npm run deploy`. Las apps instaladas se
+actualizan solas al volver a abrirlas.
+
+## Configuración opcional (`functions/.env`)
 
 | Variable | Por defecto | Para qué |
 |---|---|---|
-| `PORT` | `3000` | Puerto del servidor |
 | `GEMINI_MODEL` | `gemini-3.8-live` | Modelo de Gemini Live |
 | `GEMINI_VOICE` | `Kore` | Voz del coach (puedes oír las voces en AI Studio) |
 | `SILENCIO_MS` | `1500` | Silencio que espera antes de responder (pausas reflexivas) |
 
-## Desarrollo
+Después de cambiarlas, vuelve a publicar con `npm run deploy`.
+
+## Desarrollo local (sin tocar la nube)
+
+Los emuladores de Firebase necesitan Java instalado.
 
 ```bash
-npm run dev:server   # servidor con recarga automática (puerto 3000)
-npm run dev          # interfaz con Vite (puerto 5173), redirige /api al servidor
-npm test             # pruebas de la lógica de niveles
+cp functions/.env.example functions/.env          # pon tu correo
+echo "GEMINI_API_KEY=tu-clave" > functions/.secret.local
+npm run emuladores    # compila y levanta todo en http://localhost:5000
+npm test              # pruebas de la lógica de niveles
 ```
 
-- `server/coach.js`: instrucciones del coach, base de conocimiento, herramientas y
-  configuración de voz. **Aquí se ajusta el programa.**
-- `server/progreso.js`: niveles, evaluaciones y resúmenes.
-- `web/`: la app (PWA): micrófono, audio, cámara e interfaz.
+En `localhost` la app usa los emuladores automáticamente: el inicio de sesión de
+Google es simulado y los datos no salen de tu PC.
 
-Para empezar de cero: botón **Reiniciar programa** en la app, o borra `data/progreso.json`.
+- `functions/coach.js`: instrucciones del coach, base de conocimiento, herramientas y
+  configuración de voz. **Aquí se ajusta el programa.**
+- `functions/progreso.js`: reglas de niveles, evaluaciones y resúmenes.
+- `functions/index.js`: funciones en la nube (token de Gemini, guardar progreso).
+- `web/`: la app (PWA): inicio de sesión, micrófono, audio, cámara e interfaz.

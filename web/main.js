@@ -1,5 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import { Camara, Microfono, Reproductor } from './audio.js';
+import { alCambiarUsuario, entrarConGoogle, escucharProgreso, iniciarFirebase, llamar, salir } from './firebase.js';
 
 const $ = (id) => document.getElementById(id);
 const ui = {
@@ -17,10 +18,20 @@ const ui = {
   verTexto: $('boton-subtitulos'),
   feedback: $('ultimo-feedback'),
   reiniciar: $('boton-reiniciar'),
-  dialogoClave: $('dialogo-clave'),
-  formularioClave: $('formulario-clave'),
-  campoClave: $('campo-clave'),
+  pantallaEntrar: $('pantalla-entrar'),
+  pantallaCoach: $('pantalla-coach'),
+  botonEntrar: $('boton-entrar'),
+  errorEntrar: $('error-entrar'),
+  cuenta: $('cuenta'),
+  salir: $('boton-salir'),
 };
+
+const NIVELES = {
+  1: 'El Observador Inicial',
+  2: 'El Diseñador de Realidades',
+  3: 'El Maestro de la Coherencia Corporal',
+};
+const PROGRESO_INICIAL = { nivel: 1, programaCompleto: false, evaluaciones: [], sesiones: [] };
 
 const TEXTO_INICIO = '[Inicio de sesión: saluda en una frase y continúa el programa donde corresponde.]';
 const TEXTO_CIERRE = '[La sesión termina ahora: llama a guardar_resumen_sesion y despídete en una frase.]';
@@ -38,50 +49,16 @@ let terminando = false;
 let reintentos = 0;
 let bloqueoPantalla = null;
 let avisarResumenGuardado = null;
-
-// ---------- Servidor ----------
-
-function leerClave() {
-  try {
-    return localStorage.getItem('clave-coach') ?? '';
-  } catch {
-    return '';
-  }
-}
-
-function pedirClave() {
-  return new Promise((resolver) => {
-    ui.campoClave.value = '';
-    ui.formularioClave.onsubmit = () => {
-      try {
-        localStorage.setItem('clave-coach', ui.campoClave.value);
-      } catch {}
-    };
-    ui.dialogoClave.addEventListener('close', () => resolver(), { once: true });
-    ui.dialogoClave.showModal();
-  });
-}
-
-async function api(ruta, cuerpo) {
-  const respuesta = await fetch(ruta, {
-    method: cuerpo === undefined ? 'GET' : 'POST',
-    headers: { 'content-type': 'application/json', 'x-clave': leerClave() },
-    body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo),
-  });
-  if (respuesta.status === 401) {
-    await pedirClave();
-    return api(ruta, cuerpo);
-  }
-  const datos = await respuesta.json().catch(() => ({}));
-  if (!respuesta.ok) throw new Error(datos.error || `Error ${respuesta.status} del servidor`);
-  return datos;
-}
+let progresoActual = PROGRESO_INICIAL;
+let dejarDeEscuchar = null;
 
 // ---------- Interfaz ----------
 
-function mostrarProgreso(p) {
+function mostrarProgreso(datos) {
+  const p = { ...PROGRESO_INICIAL, ...(datos ?? {}) };
+  progresoActual = p;
   ui.etiquetaNivel.textContent = p.programaCompleto ? 'Programa completo' : `Nivel ${p.nivel} de 3`;
-  ui.nombreNivel.textContent = p.programaCompleto ? 'Coherencia integrada' : p.nombreNivel;
+  ui.nombreNivel.textContent = p.programaCompleto ? 'Coherencia integrada' : NIVELES[p.nivel];
   for (const punto of ui.progreso.children) {
     const nivel = Number(punto.dataset.nivel);
     punto.className = p.programaCompleto || nivel < p.nivel ? 'hecho' : nivel === p.nivel ? 'actual' : '';
@@ -132,21 +109,20 @@ function agregarSubtitulo(quien, texto) {
 async function ejecutarHerramienta({ name, args = {} }) {
   switch (name) {
     case 'consultar_progreso': {
-      const p = await api('/api/progreso');
+      const p = progresoActual;
       return {
         nivel: p.nivel,
-        nombreNivel: p.nombreNivel,
+        nombreNivel: NIVELES[p.nivel],
         programaCompleto: p.programaCompleto,
         ultimasEvaluaciones: p.evaluaciones.slice(-3),
       };
     }
     case 'registrar_evaluacion': {
-      const { mensaje, progreso } = await api('/api/evaluacion', args);
-      mostrarProgreso(progreso);
+      const { mensaje } = await llamar('registrarEvaluacion', args);
       return { resultado: mensaje };
     }
     case 'guardar_resumen_sesion': {
-      const { mensaje } = await api('/api/resumen', { resumen: args.resumen });
+      const { mensaje } = await llamar('guardarResumen', { resumen: args.resumen });
       avisarResumenGuardado?.();
       return { resultado: mensaje };
     }
@@ -194,7 +170,7 @@ function alMensaje(mensaje) {
 }
 
 async function conectar() {
-  const { token, modelo, config } = await api('/api/sesion', {});
+  const { token, modelo, config } = await llamar('crearSesion');
   const ai = new GoogleGenAI({ apiKey: token, httpOptions: { apiVersion: 'v1alpha' } });
   const mia = ++idConexion;
   const nueva = await ai.live.connect({
@@ -386,19 +362,58 @@ ui.reiniciar.addEventListener('click', async () => {
   if (activa) return;
   if (!confirm('¿Borrar tu progreso y volver al Nivel 1?')) return;
   try {
-    mostrarProgreso(await api('/api/reiniciar', {}));
-    actualizarEstado('Programa reiniciado.');
+    actualizarEstado((await llamar('reiniciarProgreso')).mensaje);
   } catch (err) {
     actualizarEstado(err.message);
   }
 });
 
-// ---------- Arranque ----------
+// ---------- Cuenta y arranque ----------
 
-actualizarEstado();
-api('/api/progreso')
-  .then(mostrarProgreso)
-  .catch((err) => actualizarEstado(`No pude leer tu progreso: ${err.message}`));
+function mostrarPantalla(conectado) {
+  ui.pantallaEntrar.hidden = conectado;
+  ui.pantallaCoach.hidden = !conectado;
+}
+
+ui.botonEntrar.addEventListener('click', async () => {
+  ui.errorEntrar.hidden = true;
+  try {
+    await entrarConGoogle();
+  } catch (err) {
+    ui.errorEntrar.textContent = `No se pudo iniciar sesión: ${err.message}`;
+    ui.errorEntrar.hidden = false;
+  }
+});
+
+ui.salir.addEventListener('click', () => {
+  if (activa) finalizar();
+  salir();
+});
+
+async function arrancar() {
+  try {
+    await iniciarFirebase();
+  } catch (err) {
+    ui.errorEntrar.textContent = err.message;
+    ui.errorEntrar.hidden = false;
+    return;
+  }
+  alCambiarUsuario((usuario) => {
+    dejarDeEscuchar?.();
+    dejarDeEscuchar = null;
+    mostrarPantalla(Boolean(usuario));
+    if (!usuario) return;
+    ui.cuenta.textContent = usuario.email;
+    actualizarEstado();
+    dejarDeEscuchar = escucharProgreso(usuario.uid, mostrarProgreso, (err) => {
+      const mensaje =
+        err.code === 'permission-denied' ? 'Esta cuenta no tiene acceso a la app.' : err.message;
+      actualizarEstado(`No pude leer tu progreso: ${mensaje}`);
+    });
+  });
+}
+
+arrancar();
 
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').catch(() => {});
