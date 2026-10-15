@@ -1,0 +1,55 @@
+name: Publicar en Firebase
+
+# Publica la app cada vez que se suben cambios. Necesita el secreto
+# FIREBASE_SERVICE_ACCOUNT (lo prepara "Activar publicación automática.cmd").
+on:
+  push:
+    branches: [claude/eager-ptolemy-7t0hcc, main]
+  workflow_dispatch:
+
+concurrency:
+  group: publicar
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Comprobar que la llave de publicación esté configurada
+        env:
+          LLAVE: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$LLAVE" ]; then
+            echo "::warning::Falta el secreto FIREBASE_SERVICE_ACCOUNT. Ejecuta 'Activar publicación automática.cmd' en tu PC."
+            echo "SIN_LLAVE=1" >> "$GITHUB_ENV"
+          fi
+
+      - uses: actions/checkout@v4
+        if: env.SIN_LLAVE != '1'
+
+      - uses: actions/setup-node@v4
+        if: env.SIN_LLAVE != '1'
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            functions/package-lock.json
+
+      - name: Instalar dependencias
+        if: env.SIN_LLAVE != '1'
+        run: npm ci && npm --prefix functions ci
+
+      - name: Pruebas
+        if: env.SIN_LLAVE != '1'
+        run: npm test
+
+      - uses: google-github-actions/auth@v2
+        if: env.SIN_LLAVE != '1'
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - name: Publicar
+        if: env.SIN_LLAVE != '1'
+        run: npx firebase deploy --non-interactive --force

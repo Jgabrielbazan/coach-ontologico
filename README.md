@@ -106,8 +106,22 @@ mejor.
 
 ## Actualizar
 
-Cada vez que cambie el código: `git pull` y `npm run deploy`. Las apps instaladas se
-actualizan solas al volver a abrirlas.
+### Publicación automática (recomendado)
+
+Una sola vez, en tu PC: doble clic en **`Activar publicación automática.cmd`**. Crea en tu
+proyecto de Google la cuenta `publicador-github` (solo con permisos para publicar), copia
+su llave al portapapeles y abre GitHub: en **Name** escribe `FIREBASE_SERVICE_ACCOUNT`,
+pega con Ctrl + V y pulsa **Add secret**.
+
+Desde entonces, cada cambio que se sube al repo se publica solo
+(`.github/workflows/publicar.yml`); el avance se ve en la pestaña **Actions** de GitHub.
+Para revocar el acceso, borra el secreto en GitHub y la cuenta `publicador-github` en
+Google Cloud → IAM → Cuentas de servicio.
+
+### A mano
+
+`git pull` (o bajar el ZIP) y `npm run deploy`, o doble clic en `Instalar y publicar.cmd`.
+Las apps instaladas se actualizan solas al volver a abrirlas.
 
 ## Configuración opcional (`functions/.env`)
 
