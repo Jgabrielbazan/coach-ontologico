@@ -13,6 +13,10 @@ const ui = {
   estado: $('estado'),
   video: $('vista-camara'),
   subtitulos: $('subtitulos'),
+  resultadoEvaluacion: $('resultado-evaluacion'),
+  criteriosEvaluacion: $('criterios-evaluacion'),
+  historialEvaluaciones: $('historial-evaluaciones'),
+  listaEvaluaciones: $('lista-evaluaciones'),
   costoUso: $('costo-uso'),
   barraUso: $('barra-uso'),
   textoUso: $('texto-uso'),
@@ -130,7 +134,37 @@ function mostrarProgreso(datos) {
   if (ultima) {
     ui.feedback.textContent = ultima.feedback;
     ui.puntajeFeedback.textContent = `${ultima.puntuacion}/100`;
+    ui.resultadoEvaluacion.textContent = `Nivel ${ultima.nivel} · ${ultima.aprobado ? 'Aprobada' : 'Aún no aprobada'}`;
+    ui.resultadoEvaluacion.classList.toggle('aprobada', ultima.aprobado);
+    // Cada criterio con ✓ o ✗ y la evidencia que dio el coach.
+    ui.criteriosEvaluacion.replaceChildren(
+      ...(ultima.criterios ?? []).map((c) => {
+        const item = document.createElement('li');
+        item.className = c.cumplido ? 'cumplido' : 'pendiente';
+        const texto = document.createElement('span');
+        texto.textContent = c.texto;
+        item.append(texto);
+        if (c.evidencia) {
+          const evidencia = document.createElement('small');
+          evidencia.textContent = c.evidencia;
+          item.append(evidencia);
+        }
+        return item;
+      }),
+    );
   }
+  ui.historialEvaluaciones.hidden = p.evaluaciones.length < 2;
+  ui.listaEvaluaciones.replaceChildren(
+    ...p.evaluaciones
+      .slice()
+      .reverse()
+      .map((e) => {
+        const item = document.createElement('li');
+        const fecha = e.fecha ? fechaCorta.format(new Date(e.fecha)) : '';
+        item.textContent = `${fecha} · Nivel ${e.nivel} · ${e.puntuacion}/100 · ${e.aprobado ? 'aprobada' : 'no aprobada'}`;
+        return item;
+      }),
+  );
 
   const tarea = p.tareas.at(-1);
   ui.tarjetaTarea.hidden = !tarea;

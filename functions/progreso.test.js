@@ -1,9 +1,15 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { aplicarEvaluacion, aplicarResumen, progresoInicial } from './progreso.js';
+import { CRITERIOS, aplicarEvaluacion, aplicarResumen, progresoInicial } from './progreso.js';
 
+// "aprobado" = el coach marca todos los criterios del nivel como cumplidos.
 const evaluar = (progreso, nivel, aprobado, puntuacion) =>
-  aplicarEvaluacion(progreso, { nivel, aprobado, puntuacion, feedback: 'x' });
+  aplicarEvaluacion(progreso, {
+    nivel,
+    criterios: (CRITERIOS[nivel] ?? []).map((c) => ({ id: c.id, cumplido: aprobado, evidencia: 'ej.' })),
+    puntuacion,
+    feedback: 'x',
+  });
 
 test('sube de nivel solo con aprobado y puntuación suficiente', () => {
   let p = progresoInicial();
@@ -57,7 +63,7 @@ test('elige coach y lo conserva al reiniciar', async () => {
   p = aplicarCoach(p, 'masculino').progreso;
   assert.equal(p.coach, 'masculino');
   assert.equal(aplicarCoach(p, 'robot').cambio, false);
-  p = aplicarEvaluacion(p, { nivel: 1, aprobado: true, puntuacion: 90 }).progreso;
+  p = evaluar(p, 1, true, 90).progreso;
   const reiniciado = aplicarReinicio(p).progreso;
   assert.equal(reiniciado.nivel, 1);
   assert.equal(reiniciado.coach, 'masculino');
@@ -128,4 +134,19 @@ test('uso del mes: suma, se reinicia al cambiar de mes y acota valores', async (
   assert.deepEqual(p.uso, { mes: '2026-11', segundos: 120, sesiones: 1 });
   assert.equal(aplicarUso(p, -50).cambio, false);
   assert.equal(aplicarUso(progresoInicial(), 1e9, octubre).progreso.uso.segundos, 4 * 3600);
+});
+
+test('evaluación: un criterio sin cumplir impide aprobar aunque el puntaje alcance', () => {
+  const r = aplicarEvaluacion(progresoInicial(), {
+    nivel: 1,
+    criterios: [{ id: 'clasifica', cumplido: true, evidencia: '4 de 5 bien' }],
+    puntuacion: 95,
+    feedback: 'Bien, pero no justificó',
+  });
+  assert.equal(r.progreso.nivel, 1);
+  assert.match(r.mensaje, /faltan criterios: Justifica/);
+  const guardada = r.progreso.evaluaciones[0];
+  assert.equal(guardada.criterios.length, 2);
+  assert.equal(guardada.criterios[1].cumplido, false);
+  assert.equal(guardada.criterios[0].evidencia, '4 de 5 bien');
 });

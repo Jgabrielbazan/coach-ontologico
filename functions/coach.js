@@ -1,4 +1,4 @@
-import { NIVEL_MAXIMO, PUNTUACION_MINIMA } from './progreso.js';
+import { CRITERIOS, NIVEL_MAXIMO, PUNTUACION_MINIMA } from './progreso.js';
 import { BASE_CONOCIMIENTO, OFICIO } from './conocimiento.js';
 
 export const PERFILES = {
@@ -54,7 +54,12 @@ Actúas como un Master Coach Ontológico profesional y profesor experto en el De
 - Criterio de aprobación: sostiene el rol con coherencia entre lo que dice, cómo lo dice y cómo describe o muestra su cuerpo, y corrige al menos una incoherencia cuando se la señalas.
 
 ## Herramientas
-- Al terminar CADA evaluación llama a "registrar_evaluacion" con el nivel, si aprobó según el criterio, una puntuación de 0 a 100 (mínimo ${PUNTUACION_MINIMA} para aprobar) y un feedback breve. Es el sistema el que decide si sube de nivel: comunica al usuario lo que te responda la herramienta.
+- Al terminar CADA evaluación llama a "registrar_evaluacion" con el nivel, cada criterio del nivel (por su id, ver "Criterios de evaluación") marcado como cumplido o no junto con la evidencia (lo que el usuario dijo o hizo, en pocas palabras), una puntuación de 0 a 100 (mínimo ${PUNTUACION_MINIMA}) y un feedback breve. Sé riguroso: marca un criterio como cumplido solo si hubo evidencia clara. Es el sistema el que decide si aprueba (todos los criterios y la puntuación mínima): comunica al usuario lo que te responda la herramienta.
+
+## Criterios de evaluación (id: descripción)
+${Object.entries(CRITERIOS)
+  .map(([nivel, lista]) => `- Nivel ${nivel}: ${lista.map((c) => `${c.id}: ${c.texto}`).join(' | ')}`)
+  .join('\n')}
 - Cuando el usuario se despida o la app te avise que la sesión termina: primero llama a "asignar_tarea" con UNA práctica concreta y breve para los próximos días, ligada a lo trabajado (qué hacer, en qué situación y qué observar; por ejemplo: "durante dos días, anota tres juicios que hagas sobre tu trabajo y al lado los hechos que los sostienen"); luego llama a "guardar_resumen_sesion" con 2 a 4 frases (qué se trabajó, dónde le costó y qué retomar) y despídete en una frase.
 - Si dudas del nivel actual, llama a "consultar_progreso".
 `.trim();
@@ -71,7 +76,9 @@ function estadoUsuario(progreso) {
   if (evaluaciones.length) {
     lineas.push('Últimas evaluaciones:');
     for (const e of evaluaciones) {
-      lineas.push(`- Nivel ${e.nivel}, ${e.aprobado ? 'aprobada' : 'no aprobada'} (${e.puntuacion}): ${e.feedback}`);
+      const faltaron = (e.criterios ?? []).filter((c) => !c.cumplido).map((c) => c.texto);
+      const detalle = faltaron.length ? ` Faltó: ${faltaron.join('; ')}.` : '';
+      lineas.push(`- Nivel ${e.nivel}, ${e.aprobado ? 'aprobada' : 'no aprobada'} (${e.puntuacion}): ${e.feedback}${detalle}`);
     }
   }
 
@@ -149,11 +156,23 @@ export const HERRAMIENTAS = [
           type: 'OBJECT',
           properties: {
             nivel: { type: 'INTEGER', description: 'Nivel evaluado (1 a 3).' },
-            aprobado: { type: 'BOOLEAN', description: 'Si cumplió el criterio de aprobación del nivel.' },
+            criterios: {
+              type: 'ARRAY',
+              description: 'Cada criterio del nivel con su id, si se cumplió y la evidencia.',
+              items: {
+                type: 'OBJECT',
+                properties: {
+                  id: { type: 'STRING', description: 'Id del criterio (ver "Criterios de evaluación").' },
+                  cumplido: { type: 'BOOLEAN', description: 'Si hubo evidencia clara de que se cumplió.' },
+                  evidencia: { type: 'STRING', description: 'Lo que el usuario dijo o hizo, en pocas palabras.' },
+                },
+                required: ['id', 'cumplido', 'evidencia'],
+              },
+            },
             puntuacion: { type: 'INTEGER', description: 'Puntuación de 0 a 100.' },
             feedback: { type: 'STRING', description: 'Feedback breve: qué hizo bien y qué mejorar.' },
           },
-          required: ['nivel', 'aprobado', 'puntuacion', 'feedback'],
+          required: ['nivel', 'criterios', 'puntuacion', 'feedback'],
         },
       },
       {

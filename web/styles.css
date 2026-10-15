@@ -1025,6 +1025,69 @@ button {
   color: var(--texto-suave);
 }
 
+.resultado-evaluacion {
+  font-weight: 600;
+  color: var(--texto-suave);
+}
+
+.resultado-evaluacion.aprobada {
+  color: var(--exito);
+}
+
+.criterios {
+  list-style: none;
+  margin: 8px 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.85rem;
+}
+
+.criterios li {
+  position: relative;
+  padding-left: 22px;
+}
+
+.criterios li::before {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-weight: 700;
+}
+
+.criterios li.cumplido::before {
+  content: '✓';
+  color: var(--exito);
+}
+
+.criterios li.pendiente::before {
+  content: '✗';
+  color: var(--peligro);
+}
+
+.criterios small {
+  display: block;
+  color: var(--texto-suave);
+  font-size: 0.78rem;
+}
+
+.historial {
+  margin-top: 8px;
+  font-size: 0.82rem;
+}
+
+.historial summary {
+  cursor: pointer;
+  color: var(--texto-suave);
+}
+
+.historial ol {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  color: var(--texto-suave);
+}
+
 .tarjeta-tarea {
   border-color: var(--actual-borde);
 }

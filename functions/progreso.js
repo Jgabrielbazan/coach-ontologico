@@ -10,6 +10,25 @@ const MAX_TAREAS_GUARDADAS = 30;
 
 export const COACHES = ['femenino', 'masculino'];
 
+// Criterios explícitos de cada evaluación. Se aprueba solo si se cumplen todos
+// y la puntuación llega al mínimo: lo decide el servidor, no el modelo.
+export const CRITERIOS = {
+  1: [
+    { id: 'clasifica', texto: 'Clasifica bien al menos 4 de los 5 elementos como hecho o juicio' },
+    { id: 'justifica', texto: 'Justifica al menos una clasificación con su propio razonamiento' },
+  ],
+  2: [
+    { id: 'declaracion', texto: 'Elige una declaración pertinente para el caso' },
+    { id: 'formula', texto: 'La formula en primera persona, con claridad, como si estuviera en la situación' },
+    { id: 'impacto', texto: 'Explica qué posibilidad abre o cierra esa declaración' },
+  ],
+  3: [
+    { id: 'coherencia', texto: 'Sostiene el rol con coherencia entre lo que dice, cómo lo dice y su cuerpo' },
+    { id: 'corrige', texto: 'Corrige al menos una incoherencia cuando se le señala' },
+    { id: 'voz', texto: 'Usa pausas y un ritmo de voz que transmiten calma y seguridad' },
+  ],
+};
+
 export function progresoInicial() {
   return { nivel: 1, programaCompleto: false, evaluaciones: [], sesiones: [], tareas: [], coach: 'femenino' };
 }
@@ -24,7 +43,7 @@ export function normalizar(datos) {
  * mínima + que la evaluación sea del nivel actual.
  * Devuelve { progreso, mensaje, cambio }.
  */
-export function aplicarEvaluacion(actual, { nivel, aprobado, puntuacion, feedback } = {}) {
+export function aplicarEvaluacion(actual, { nivel, criterios = [], puntuacion, feedback } = {}) {
   const progreso = structuredClone(normalizar(actual));
   const puntos = Math.max(0, Math.min(100, Math.round(Number(puntuacion) || 0)));
   const nivelEvaluado = Number(nivel) || progreso.nivel;
@@ -40,10 +59,20 @@ export function aplicarEvaluacion(actual, { nivel, aprobado, puntuacion, feedbac
     };
   }
 
-  const supera = Boolean(aprobado) && puntos >= PUNTUACION_MINIMA;
+  // Cada criterio del nivel, con lo que reportó el coach (lo no reportado cuenta como no cumplido).
+  const reportados = new Map((Array.isArray(criterios) ? criterios : []).map((c) => [c?.id, c]));
+  const detalle = CRITERIOS[progreso.nivel].map(({ id, texto }) => ({
+    id,
+    texto,
+    cumplido: reportados.get(id)?.cumplido === true,
+    evidencia: String(reportados.get(id)?.evidencia ?? '').slice(0, 400),
+  }));
+  const faltantes = detalle.filter((c) => !c.cumplido);
+  const supera = faltantes.length === 0 && puntos >= PUNTUACION_MINIMA;
   progreso.evaluaciones.push({
     nivel: progreso.nivel,
     aprobado: supera,
+    criterios: detalle,
     puntuacion: puntos,
     feedback: String(feedback ?? '').slice(0, 2000),
     fecha: new Date().toISOString(),
@@ -52,9 +81,12 @@ export function aplicarEvaluacion(actual, { nivel, aprobado, puntuacion, feedbac
 
   let mensaje;
   if (!supera) {
+    const motivo = faltantes.length
+      ? `faltan criterios: ${faltantes.map((c) => c.texto).join('; ')}`
+      : `puntuación ${puntos}, mínimo ${PUNTUACION_MINIMA}`;
     mensaje =
-      `No aprobado (puntuación ${puntos}, mínimo ${PUNTUACION_MINIMA}). ` +
-      `Sigue en el NIVEL ${progreso.nivel}. Da feedback concreto y propón practicar de nuevo.`;
+      `No aprobado (${motivo}). Sigue en el NIVEL ${progreso.nivel}. ` +
+      'Explícale con cariño qué faltó, da un ejemplo concreto y propón practicar de nuevo.';
   } else if (progreso.nivel < NIVEL_MAXIMO) {
     progreso.nivel += 1;
     mensaje = `Aprobado con ${puntos}. El usuario sube al NIVEL ${progreso.nivel}. Felicítalo y presenta brevemente el nuevo nivel.`;
