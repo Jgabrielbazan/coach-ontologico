@@ -13,6 +13,7 @@ import {
   mensajeRecordatorio,
 } from './recordatorios.js';
 import {
+  aplicarAvatar,
   aplicarAvance,
   aplicarCoach,
   aplicarDia,
@@ -236,6 +237,12 @@ export const probarRecordatorio = onCall(async (request) => {
   const resultado = await enviarNotificacion(await clavesVapid(db), suscripcion, mensajeRecordatorio(await leerProgreso(uid)));
   if (resultado !== 'ok') throw new HttpsError('unavailable', 'No se pudo enviar la notificación de prueba.');
   return { mensaje: 'Notificación enviada.' };
+});
+
+export const elegirAvatar = onCall(async (request) => {
+  const uid = usuarioAutorizado(request);
+  const { mensaje } = await actualizarProgreso(uid, (p) => aplicarAvatar(p, request.data?.avatar));
+  return { mensaje };
 });
 
 export const elegirCoach = onCall(async (request) => {

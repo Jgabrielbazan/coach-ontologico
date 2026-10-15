@@ -79,6 +79,7 @@
           <span>Coach Ontológico</span>
         </div>
         <div class="usuario">
+          <button type="button" id="boton-avatar" class="avatar-usuario" aria-label="Cambiar tu avatar" title="Tu avatar (toca para cambiarlo)"></button>
           <span id="cuenta" class="usuario-correo"></span>
           <button type="button" class="boton-tema" aria-label="Cambiar entre modo día y modo noche" title="Modo día / noche">
             <svg class="icono-luna" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
@@ -252,26 +253,41 @@
           </li>
         </ol>
 
-        <section class="tarjeta" id="tarjeta-sesion" hidden>
-          <h3>Última sesión <span id="fecha-sesion" class="tenue"></span></h3>
-          <p id="ultima-sesion"></p>
-        </section>
-        <section class="tarjeta" id="tarjeta-feedback" hidden>
-          <h3>Última evaluación <span id="puntaje-feedback" class="puntaje"></span></h3>
-          <p id="resultado-evaluacion" class="resultado-evaluacion"></p>
-          <ul id="criterios-evaluacion" class="criterios"></ul>
-          <p id="ultimo-feedback"></p>
-          <details id="historial-evaluaciones" class="historial" hidden>
-            <summary>Ver todas las evaluaciones</summary>
-            <ol id="lista-evaluaciones"></ol>
-          </details>
-        </section>
+        <details class="tarjeta plegable" id="tarjeta-sesion" hidden>
+          <summary>
+            <span class="plegable-titulo">Última sesión</span>
+            <span id="fecha-sesion" class="tenue"></span>
+          </summary>
+          <div class="plegable-cuerpo">
+            <p id="ultima-sesion"></p>
+          </div>
+        </details>
+        <details class="tarjeta plegable" id="tarjeta-feedback" hidden>
+          <summary>
+            <span class="plegable-titulo">Última evaluación</span>
+            <span id="puntaje-feedback" class="puntaje"></span>
+          </summary>
+          <div class="plegable-cuerpo">
+            <p id="resultado-evaluacion" class="resultado-evaluacion"></p>
+            <ul id="criterios-evaluacion" class="criterios"></ul>
+            <p id="ultimo-feedback"></p>
+            <details id="historial-evaluaciones" class="historial" hidden>
+              <summary>Ver todas las evaluaciones</summary>
+              <ol id="lista-evaluaciones"></ol>
+            </details>
+          </div>
+        </details>
 
-        <section class="tarjeta" id="tarjeta-uso">
-          <h3>Uso de este mes <span id="costo-uso" class="puntaje"></span></h3>
-          <div class="barra-uso" aria-hidden="true"><span id="barra-uso"></span></div>
-          <p id="texto-uso" class="texto-uso"></p>
-        </section>
+        <details class="tarjeta plegable" id="tarjeta-uso">
+          <summary>
+            <span class="plegable-titulo">Uso de este mes</span>
+            <span id="costo-uso" class="puntaje"></span>
+          </summary>
+          <div class="plegable-cuerpo">
+            <div class="barra-uso" aria-hidden="true"><span id="barra-uso"></span></div>
+            <p id="texto-uso" class="texto-uso"></p>
+          </div>
+        </details>
 
         <button type="button" id="boton-reiniciar" class="enlace">Reiniciar programa</button>
         <p class="version" id="version"></p>
@@ -287,6 +303,15 @@
           <p class="sobretitulo" id="etiqueta-nivel">Nivel 1 de 5</p>
           <h1 class="titulo-nivel" id="nombre-nivel">El Observador Inicial</h1>
         </div>
+
+        <section class="progreso-programa" id="progreso-programa" aria-labelledby="titulo-progreso">
+          <div class="progreso-cabecera">
+            <span id="titulo-progreso">Tu progreso</span>
+            <strong id="porcentaje-programa">0%</strong>
+          </div>
+          <ol class="progreso-tramos" id="tramos-programa"></ol>
+          <p class="progreso-detalle" id="detalle-programa"></p>
+        </section>
 
         <section class="panel-practica" id="panel-practica" hidden>
           <label for="campo-situacion">¿Qué situación real quieres ensayar?</label>
@@ -357,6 +382,28 @@
           </form>
         </section>
       </main>
+    </div>
+
+    <dialog class="dialogo-avatar" id="dialogo-avatar" aria-labelledby="titulo-avatar">
+      <h2 id="titulo-avatar" class="titulo-dialogo">Elige tu avatar</h2>
+      <p class="bajada-dialogo">Te acompaña en la app y te saluda cada vez que entras. Puedes cambiarlo cuando quieras.</p>
+      <div class="grupo-avatares">
+        <h3>Femeninos</h3>
+        <div class="opciones-avatar" data-genero="femenino"></div>
+      </div>
+      <div class="grupo-avatares">
+        <h3>Masculinos</h3>
+        <div class="opciones-avatar" data-genero="masculino"></div>
+      </div>
+      <button type="button" id="cerrar-avatar" class="boton-fantasma cerrar-dialogo">Ahora no</button>
+    </dialog>
+
+    <div class="bienvenida" id="bienvenida" hidden>
+      <div class="bienvenida-tarjeta">
+        <div class="bienvenida-avatar" id="bienvenida-avatar"></div>
+        <p class="bienvenida-titulo" id="bienvenida-titulo"></p>
+        <p class="bienvenida-bajada" id="bienvenida-bajada"></p>
+      </div>
     </div>
 
     <dialog class="dialogo-certificado" id="dialogo-certificado" aria-label="Certificado de nivel">

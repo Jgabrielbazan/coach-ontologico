@@ -1,5 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import { Camara, Microfono, Reproductor, listarMicrofonos } from './audio.js';
+import { AVATARES } from './avatares.js';
 import { dibujarCertificado } from './certificado.js';
 import { Orbe } from './orbe.js';
 import { alCambiarUsuario, entrarConGoogle, escucharProgreso, iniciarFirebase, llamar, salir } from './firebase.js';
@@ -96,6 +97,17 @@ const ui = {
   cuentaSemana: $('cuenta-semana'),
   diasSemana: $('dias-semana'),
   textoSemana: $('texto-semana'),
+  botonAvatar: $('boton-avatar'),
+  dialogoAvatar: $('dialogo-avatar'),
+  cerrarAvatar: $('cerrar-avatar'),
+  bienvenida: $('bienvenida'),
+  bienvenidaAvatar: $('bienvenida-avatar'),
+  bienvenidaTitulo: $('bienvenida-titulo'),
+  bienvenidaBajada: $('bienvenida-bajada'),
+  progresoPrograma: $('progreso-programa'),
+  porcentajePrograma: $('porcentaje-programa'),
+  tramosPrograma: $('tramos-programa'),
+  detallePrograma: $('detalle-programa'),
 };
 
 const NOMBRES_COACH = { femenino: 'Sofía', masculino: 'Tomás' };
@@ -118,6 +130,7 @@ const PROGRESO_INICIAL = {
   evolucion: [],
   proposito: null,
   dias: [],
+  avatar: null,
   coach: 'femenino',
 };
 
@@ -166,6 +179,9 @@ let avisoMicrofono = '';
 let nombreUsuario = '';
 let nivelVisto = null; // nivel del último progreso mostrado, para detectar cuándo se aprueba uno
 let certificadoAbierto = null;
+let bienvenidaPendiente = false; // saludo del avatar al entrar, una vez por inicio de sesión
+let primerNombre = '';
+let diasEstaSemana = 0;
 
 new Orbe($('orbe-entrar'), { obtenerEstado: () => 'inactivo' });
 const orbeCoach = new Orbe($('orbe-coach'), {
@@ -203,7 +219,8 @@ function mostrarProgreso(datos) {
   ui.tarjetaFeedback.hidden = !ultima;
   if (ultima) {
     ui.feedback.textContent = ultima.feedback;
-    ui.puntajeFeedback.textContent = `${ultima.puntuacion}/100`;
+    ui.puntajeFeedback.textContent = `${ultima.aprobado ? '✓ ' : ''}${ultima.puntuacion}/100`;
+    ui.puntajeFeedback.classList.toggle('aprobada', ultima.aprobado);
     ui.resultadoEvaluacion.textContent = `Nivel ${ultima.nivel} · ${ultima.aprobado ? 'Aprobada' : 'Aún no aprobada'}`;
     ui.resultadoEvaluacion.classList.toggle('aprobada', ultima.aprobado);
     // Cada criterio con ✓ o ✗ y la evidencia que dio el coach.
@@ -236,6 +253,8 @@ function mostrarProgreso(datos) {
       }),
   );
 
+  mostrarAvatar(p.avatar);
+  mostrarAvance(p);
   mostrarProposito(p.proposito);
   mostrarSemana(p.dias);
   mostrarEvolucion(p.evolucion);
@@ -274,6 +293,141 @@ function mostrarProgreso(datos) {
     ui.ultimaSesion.textContent = prefijo + sesion.resumen;
     ui.fechaSesion.textContent = fechaCorta.format(new Date(sesion.fecha));
   }
+
+  if (bienvenidaPendiente) {
+    bienvenidaPendiente = false;
+    if (p.avatar) saludar(p);
+    else abrirSelectorAvatar();
+  }
+}
+
+// ---------- Tu avatar ----------
+
+// Las opciones del selector se arman una vez (los dibujos son SVG propios de la app).
+for (const [id, avatar] of Object.entries(AVATARES)) {
+  const opcion = document.createElement('button');
+  opcion.type = 'button';
+  opcion.className = 'opcion-avatar';
+  opcion.dataset.avatar = id;
+  opcion.setAttribute('role', 'radio');
+  opcion.setAttribute('aria-checked', 'false');
+  opcion.innerHTML = `${avatar.svg}<span class="opcion-avatar-nombre">${avatar.nombre}</span><small>${avatar.estilo}</small>`;
+  opcion.addEventListener('click', () => elegirAvatar(id));
+  document.querySelector(`.opciones-avatar[data-genero="${avatar.genero}"]`).append(opcion);
+}
+
+function mostrarAvatar(id) {
+  const avatar = AVATARES[id];
+  ui.botonAvatar.innerHTML = avatar ? avatar.svg : '<span aria-hidden="true">+</span>';
+  ui.botonAvatar.classList.toggle('sin-avatar', !avatar);
+  for (const opcion of document.querySelectorAll('.opcion-avatar')) {
+    opcion.setAttribute('aria-checked', String(opcion.dataset.avatar === id));
+  }
+}
+
+function abrirSelectorAvatar() {
+  if (!ui.dialogoAvatar.open) ui.dialogoAvatar.showModal();
+}
+
+async function elegirAvatar(id) {
+  const anterior = progresoActual.avatar;
+  ui.dialogoAvatar.close();
+  if (id === anterior) return;
+  // Se muestra al instante; si el servidor no lo guarda, se vuelve al anterior.
+  mostrarAvatar(id);
+  saludar({ ...progresoActual, avatar: id }, { nuevo: true });
+  try {
+    await llamar('elegirAvatar', { avatar: id });
+  } catch (err) {
+    mostrarAvatar(anterior);
+    actualizarEstado(`No pude guardar tu avatar: ${err.message}`);
+  }
+}
+
+/** El avatar aparece, saluda y cuenta en una línea dónde estás. Se va solo o con un toque. */
+function saludar(p, { nuevo = false } = {}) {
+  const avatar = AVATARES[p.avatar];
+  if (!avatar) return;
+  ui.bienvenidaAvatar.innerHTML = avatar.svg;
+  ui.bienvenidaTitulo.textContent = primerNombre ? `¡Hola, ${primerNombre}!` : '¡Hola!';
+  const semana = diasEstaSemana ? ` · ${diasEstaSemana} de 7 días esta semana` : '';
+  ui.bienvenidaBajada.textContent = nuevo
+    ? `${avatar.nombre} te acompaña desde ahora. ¡Vamos con todo!`
+    : p.programaCompleto
+      ? `Completaste el programa${semana}. ¿Practicamos algo hoy?`
+      : `Nivel ${p.nivel} · ${NIVELES[p.nivel]}${semana}`;
+  ui.bienvenida.hidden = false;
+  // Reinicia la animación aunque se vuelva a mostrar enseguida.
+  ui.bienvenida.classList.remove('saliendo');
+  clearTimeout(saludar.temporizador);
+  saludar.temporizador = setTimeout(cerrarBienvenida, 3600);
+}
+
+function cerrarBienvenida() {
+  if (ui.bienvenida.hidden) return;
+  ui.bienvenida.classList.add('saliendo');
+  setTimeout(() => {
+    ui.bienvenida.hidden = true;
+    ui.bienvenida.classList.remove('saliendo');
+  }, 350);
+}
+
+ui.botonAvatar.addEventListener('click', abrirSelectorAvatar);
+ui.cerrarAvatar.addEventListener('click', () => ui.dialogoAvatar.close());
+ui.dialogoAvatar.addEventListener('click', (e) => e.target === ui.dialogoAvatar && ui.dialogoAvatar.close());
+ui.bienvenida.addEventListener('click', cerrarBienvenida);
+
+// ---------- Tu progreso (barra del programa) ----------
+
+// Un tramo por nivel; dentro del nivel actual avanza con los criterios logrados en el último intento.
+for (let nivel = 1; nivel <= NIVEL_MAXIMO; nivel++) {
+  const tramo = document.createElement('li');
+  tramo.append(document.createElement('span'));
+  ui.tramosPrograma.append(tramo);
+}
+
+function mostrarAvance(p) {
+  const aprobados = p.programaCompleto ? NIVEL_MAXIMO : p.nivel - 1;
+  const intento = p.programaCompleto ? null : p.evaluaciones.findLast((e) => e.nivel === p.nivel);
+  const total = intento?.criterios?.length ?? 0;
+  const logrados = intento?.criterios?.filter((c) => c.cumplido).length ?? 0;
+  // Sin aprobar, el nivel actual nunca se ve completo.
+  const parcial = total ? Math.min(0.9, logrados / total) : 0;
+  const porcentaje = Math.round(((aprobados + parcial) / NIVEL_MAXIMO) * 100);
+  ui.porcentajePrograma.textContent = `${porcentaje}%`;
+  [...ui.tramosPrograma.children].forEach((tramo, i) => {
+    const nivel = i + 1;
+    const actual = !p.programaCompleto && nivel === p.nivel;
+    const relleno = nivel <= aprobados ? 1 : actual ? Math.max(parcial, 0.05) : 0;
+    tramo.className = nivel <= aprobados ? 'hecho' : actual ? 'actual' : '';
+    tramo.title = `Nivel ${nivel}: ${NIVELES[nivel]}`;
+    tramo.setAttribute(
+      'aria-label',
+      `Nivel ${nivel}, ${NIVELES[nivel]}: ${nivel <= aprobados ? 'aprobado' : actual ? 'en curso' : 'por delante'}`,
+    );
+    tramo.firstChild.style.transform = `scaleX(${relleno})`;
+  });
+  ui.detallePrograma.textContent = p.programaCompleto
+    ? `¡Completaste los ${NIVEL_MAXIMO} niveles!`
+    : total
+      ? `Nivel ${p.nivel}: ${logrados} de ${total} criterios logrados en tu último intento.`
+      : `Nivel ${p.nivel}: aún sin evaluación. ${
+          aprobados ? `Ya aprobaste ${aprobados} ${aprobados === 1 ? 'nivel' : 'niveles'}.` : '¡Vamos por el primero!'
+        }`;
+}
+
+// ---------- Tarjetas plegables (recuerdan si las dejaste abiertas) ----------
+
+for (const plegable of document.querySelectorAll('details.plegable')) {
+  const clave = `plegable-${plegable.id}`;
+  try {
+    plegable.open = localStorage.getItem(clave) === 'abierta';
+  } catch {}
+  plegable.addEventListener('toggle', () => {
+    try {
+      localStorage.setItem(clave, plegable.open ? 'abierta' : 'cerrada');
+    } catch {}
+  });
 }
 
 /** Fecha local del aparato como "AAAA-MM-DD" (para contar días practicados). */
@@ -347,6 +501,7 @@ function mostrarSemana(dias) {
     }),
   );
   ui.cuentaSemana.textContent = `${cuenta} de 7`;
+  diasEstaSemana = cuenta;
   const hoyHecho = practicados.has(hoy);
   const animo =
     cuenta === 0
@@ -547,11 +702,13 @@ function mostrarUso(p) {
 /** El encabezado muestra el nivel en el programa, o la situación en la práctica libre. */
 function actualizarEncabezado() {
   if (modo !== 'practica') {
+    ui.progresoPrograma.hidden = false;
     const p = progresoActual;
     ui.etiquetaNivel.textContent = p.programaCompleto ? 'Programa completo' : `Nivel ${p.nivel} de ${NIVEL_MAXIMO}`;
     ui.nombreNivel.textContent = p.programaCompleto ? 'Coherencia integrada' : NIVELES[p.nivel];
     return;
   }
+  ui.progresoPrograma.hidden = true;
   ui.etiquetaNivel.textContent = 'Práctica libre';
   ui.nombreNivel.textContent = activa && situacionActiva ? situacionActiva : 'Ensaya una situación real';
 }
@@ -1363,6 +1520,8 @@ async function arrancar() {
     if (!usuario) return;
     ui.cuenta.textContent = usuario.email;
     nombreUsuario = usuario.displayName || usuario.email.split('@')[0];
+    primerNombre = nombreUsuario.split(' ')[0];
+    bienvenidaPendiente = true;
     cargarMicrofonos();
     prepararRecordatorios();
     actualizarEstado();

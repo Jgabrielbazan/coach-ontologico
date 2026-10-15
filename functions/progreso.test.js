@@ -301,3 +301,13 @@ test('"algo para llevarte": se guarda, se retoma y llega en el recordatorio', as
   assert.match(mensajeRecordatorio(p).titulo, /Para llevarte/);
   assert.equal(aplicarFrase(p, '   ').cambio, false);
 });
+
+test('avatar: solo los conocidos y se conserva al reiniciar', async () => {
+  const { aplicarAvatar, aplicarReinicio, AVATARES } = await import('./progreso.js');
+  assert.equal(AVATARES.length, 6);
+  assert.equal(progresoInicial().avatar, null);
+  assert.equal(aplicarAvatar(progresoInicial(), 'dragon').cambio, false);
+  const p = aplicarAvatar(progresoInicial(), 'lobo').progreso;
+  assert.equal(p.avatar, 'lobo');
+  assert.equal(aplicarReinicio(p).progreso.avatar, 'lobo');
+});

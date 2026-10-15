@@ -21,6 +21,10 @@ en la PC y en el móvil, cada una por su cuenta. Entras con tu cuenta de Google 
 - **Coach con oficio:** contrato de sesión, preguntas poderosas, distinciones de la
   ontología del lenguaje. Dos perfiles: Sofía y Tomás.
 - **Tareas entre sesiones:** el coach deja una práctica, anotas cómo te fue y la retoma.
+- **Tu avatar:** seis animalitos (gatita, coneja y leona; osito, lobo y tigre), tiernos o
+  rudos. Lo eliges al entrar por primera vez, te saluda en cada inicio y se cambia tocándolo.
+- **Tu progreso:** barra del programa por niveles, que avanza también con los criterios
+  logrados en tu último intento. Las tarjetas de sesión, evaluación y uso son plegables.
 - **Tu propósito:** el coach te ayuda a declarar para qué haces el programa (o lo escribes
   tú); lo retoma en los momentos clave y aparece en tus certificados.
 - **Tu semana:** los días que practicaste (sesión de al menos 1 minuto o reflexión de la

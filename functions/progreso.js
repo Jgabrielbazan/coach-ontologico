@@ -15,6 +15,8 @@ export const SEGUNDOS_PARA_CONTAR_DIA = 60;
 export const TIPOS_AVANCE = ['partida', 'avance'];
 
 export const COACHES = ['femenino', 'masculino'];
+// Avatares del usuario (los dibujos están en la app): femeninos y masculinos, tiernos y rudos.
+export const AVATARES = ['gatita', 'coneja', 'leona', 'osito', 'lobo', 'tigre'];
 
 // Criterios explícitos de cada evaluación. Se aprueba solo si se cumplen todos
 // y la puntuación llega al mínimo: lo decide el servidor, no el modelo.
@@ -56,6 +58,7 @@ export function progresoInicial() {
     evolucion: [],
     proposito: null,
     dias: [],
+    avatar: null,
     coach: 'femenino',
   };
 }
@@ -161,10 +164,18 @@ export function aplicarCoach(actual, coach) {
   return { progreso, cambio: true, mensaje: 'Coach actualizado.' };
 }
 
-/** Vuelve al Nivel 1 conservando el coach elegido, el propósito y los días practicados. */
+/** El avatar con que se muestra el usuario en la app. */
+export function aplicarAvatar(actual, avatar) {
+  const progreso = structuredClone(normalizar(actual));
+  if (!AVATARES.includes(avatar)) return { progreso, cambio: false, mensaje: `Avatar desconocido: ${avatar}` };
+  progreso.avatar = avatar;
+  return { progreso, cambio: true, mensaje: 'Avatar actualizado.' };
+}
+
+/** Vuelve al Nivel 1 conservando el coach, el avatar, el propósito y los días practicados. */
 export function aplicarReinicio(actual) {
-  const { coach, proposito, dias } = normalizar(actual);
-  return { progreso: { ...progresoInicial(), coach, proposito, dias }, cambio: true, mensaje: 'Programa reiniciado.' };
+  const { coach, avatar, proposito, dias } = normalizar(actual);
+  return { progreso: { ...progresoInicial(), coach, avatar, proposito, dias }, cambio: true, mensaje: 'Programa reiniciado.' };
 }
 
 /** Mes en curso como "AAAA-MM" (hora UTC). */
