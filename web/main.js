@@ -13,6 +13,9 @@ const ui = {
   estado: $('estado'),
   video: $('vista-camara'),
   subtitulos: $('subtitulos'),
+  conversacion: $('conversacion'),
+  formularioMensaje: $('formulario-mensaje'),
+  campoMensaje: $('campo-mensaje'),
   controles: $('controles'),
   silencio: $('boton-silencio'),
   camara: $('boton-camara'),
@@ -132,22 +135,40 @@ function actualizarEstado(mensaje) {
 }
 
 let ultimoHablante = null;
-function agregarSubtitulo(quien, texto) {
-  let parrafo = ui.subtitulos.lastElementChild;
-  if (quien !== ultimoHablante || !parrafo) {
-    parrafo = document.createElement('p');
-    parrafo.className = quien;
+/** Agrega texto a la conversación: se suma a la burbuja actual si sigue hablando el mismo. */
+function agregarSubtitulo(quien, texto, { nuevaBurbuja = false } = {}) {
+  let burbuja = ui.subtitulos.lastElementChild;
+  if (quien !== ultimoHablante || !burbuja || nuevaBurbuja) {
+    burbuja = document.createElement('div');
+    burbuja.className = `mensaje mensaje-${quien}`;
     const etiqueta = document.createElement('span');
-    etiqueta.className = 'quien';
-    etiqueta.textContent = quien === 'coach' ? 'Coach: ' : 'Tú: ';
-    parrafo.append(etiqueta, document.createTextNode(''));
-    ui.subtitulos.append(parrafo);
-    while (ui.subtitulos.children.length > 40) ui.subtitulos.firstElementChild.remove();
+    etiqueta.className = 'mensaje-quien';
+    etiqueta.textContent = quien === 'coach' ? (NOMBRES_COACH[progresoActual.coach] ?? 'Coach') : 'Tú';
+    const contenido = document.createElement('p');
+    burbuja.append(etiqueta, contenido);
+    ui.subtitulos.append(burbuja);
+    while (ui.subtitulos.children.length > 60) ui.subtitulos.firstElementChild.remove();
     ultimoHablante = quien;
   }
-  parrafo.lastChild.textContent += texto;
+  burbuja.lastChild.textContent += texto;
   ui.subtitulos.scrollTop = ui.subtitulos.scrollHeight;
 }
+
+// Escribirle al coach: responde por voz igual que si le hablaras.
+ui.formularioMensaje.addEventListener('submit', (evento) => {
+  evento.preventDefault();
+  const texto = ui.campoMensaje.value.trim();
+  if (!texto) return;
+  if (!sesion) {
+    actualizarEstado('Empieza una sesión para escribirle a tu coach.');
+    return;
+  }
+  agregarSubtitulo('usuario', texto, { nuevaBurbuja: true });
+  ultimoHablante = null; // lo próximo que llegue (voz o respuesta) va en otra burbuja
+  reproductor.cortar();
+  sesion.sendClientContent({ turns: [{ role: 'user', parts: [{ text: texto }] }], turnComplete: true });
+  ui.campoMensaje.value = '';
+});
 
 // ---------- Herramientas que llama el coach ----------
 
@@ -490,9 +511,10 @@ ui.camara.addEventListener('click', async () => {
 });
 
 ui.verTexto.addEventListener('click', () => {
-  ui.subtitulos.hidden = !ui.subtitulos.hidden;
-  ui.verTexto.setAttribute('aria-pressed', String(!ui.subtitulos.hidden));
-  ponerTexto(ui.verTexto, ui.subtitulos.hidden ? 'Texto' : 'Ocultar texto');
+  ui.conversacion.hidden = !ui.conversacion.hidden;
+  ui.verTexto.setAttribute('aria-pressed', String(!ui.conversacion.hidden));
+  ponerTexto(ui.verTexto, ui.conversacion.hidden ? 'Texto' : 'Ocultar texto');
+  if (!ui.conversacion.hidden) ui.campoMensaje.focus();
 });
 
 for (const opcion of ui.opcionesCoach) {

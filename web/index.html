@@ -176,7 +176,15 @@
           </button>
         </nav>
 
-        <section class="subtitulos" id="subtitulos" aria-label="Transcripción" aria-live="polite" hidden></section>
+        <section class="conversacion" id="conversacion" aria-label="Conversación" hidden>
+          <div class="mensajes" id="subtitulos" aria-live="polite"></div>
+          <form class="escribir" id="formulario-mensaje" autocomplete="off">
+            <input id="campo-mensaje" type="text" placeholder="Escríbele a tu coach…" aria-label="Mensaje para tu coach" maxlength="1000" />
+            <button type="submit" class="boton-enviar" aria-label="Enviar">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.4 20.4 21 12 3.4 3.6 3.4 10l12.6 2-12.6 2z"/></svg>
+            </button>
+          </form>
+        </section>
       </main>
     </div>
 
