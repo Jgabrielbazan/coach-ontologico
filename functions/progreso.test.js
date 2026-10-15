@@ -94,7 +94,7 @@ test('práctica libre: instrucciones y herramientas propias', async () => {
   assert.match(practica.systemInstruction, /práctica libre/);
   assert.match(practica.systemInstruction, /«Poner un límite a mi hermano»/);
   const nombres = practica.tools[0].functionDeclarations.map((f) => f.name);
-  assert.deepEqual(nombres, ['asignar_tarea', 'dejar_frase', 'guardar_resumen_sesion']);
+  assert.deepEqual(nombres, ['asignar_tarea', 'dejar_frase', 'registrar_avance', 'guardar_resumen_sesion']);
   const programa = configuracionLive(progresoInicial());
   assert.ok(programa.tools[0].functionDeclarations.some((f) => f.name === 'registrar_evaluacion'));
 });
@@ -182,6 +182,48 @@ test('diálogo afectivo activado y pautas de humor e ironía', async () => {
   const { configuracionLive, instruccionesSistema } = await import('./coach.js');
   assert.equal(configuracionLive(progresoInicial()).enableAffectiveDialog, true);
   assert.match(instruccionesSistema(progresoInicial()), /noto algo de ironía/);
+});
+
+test('tu evolución: guarda citas textuales, sin duplicados, y conserva el primer punto de partida', async () => {
+  const { aplicarAvance } = await import('./progreso.js');
+  let p = aplicarAvance(progresoInicial(), { cita: '"Mi jefe nunca escucha."', tipo: 'partida', distincion: 'juicio como hecho' }).progreso;
+  assert.deepEqual(
+    { ...p.evolucion[0], fecha: undefined },
+    { tipo: 'partida', cita: 'Mi jefe nunca escucha.', distincion: 'juicio como hecho', nivel: 1, fecha: undefined },
+  );
+  assert.equal(aplicarAvance(p, { cita: 'Mi jefe nunca escucha.' }).cambio, false);
+  assert.equal(aplicarAvance(p, { cita: '  ' }).cambio, false);
+  assert.equal(aplicarAvance(p, { cita: 'otra', tipo: 'raro' }).progreso.evolucion[1].tipo, 'avance');
+  for (let i = 0; i < 70; i++) p = aplicarAvance(p, { cita: `Avance ${i}`, tipo: 'avance' }).progreso;
+  assert.equal(p.evolucion.length, 60);
+  assert.equal(p.evolucion[0].cita, 'Mi jefe nunca escucha.');
+  assert.equal(p.evolucion.at(-1).cita, 'Avance 69');
+});
+
+test('reconocimiento: el coach recibe el antes y el ahora y la pauta para nombrarlo', async () => {
+  const { aplicarAvance } = await import('./progreso.js');
+  const { instruccionesSistema, instruccionesPractica } = await import('./coach.js');
+  let p = aplicarAvance(progresoInicial(), { cita: 'Mi jefe nunca escucha.', tipo: 'partida' }).progreso;
+  p = aplicarAvance(p, { cita: 'No respondió dos correos; voy a pedirle 15 minutos.', tipo: 'avance', distincion: 'pedido con plazo' }).progreso;
+  const texto = instruccionesSistema(p);
+  assert.match(texto, /punto de partida: «Mi jefe nunca escucha\.»/);
+  assert.match(texto, /avance: «No respondió dos correos; voy a pedirle 15 minutos\.» \(pedido con plazo\)/);
+  assert.match(texto, /nombra UN progreso concreto/);
+  assert.match(instruccionesPractica(p, 'Pedir un aumento'), /registrar_avance/);
+});
+
+test('ceremonia: al aprobar, el coach recibe las citas del nivel y la pauta del cierre', async () => {
+  const { aplicarAvance } = await import('./progreso.js');
+  let p = aplicarAvance(progresoInicial(), { cita: 'Separé el hecho del juicio.', tipo: 'avance' }).progreso;
+  const aprobado = evaluar(p, 1, true, 88);
+  assert.equal(aprobado.progreso.nivel, 2);
+  assert.match(aprobado.mensaje, /aprobó el NIVEL 1 y sube al NIVEL 2/);
+  assert.match(aprobado.mensaje, /CEREMONIA/);
+  assert.match(aprobado.mensaje, /«Separé el hecho del juicio\.»/);
+  assert.doesNotMatch(evaluar(p, 1, false, 88).mensaje, /CEREMONIA/);
+  // Las citas del nivel 1 no se mezclan en la ceremonia del nivel 2.
+  p = evaluar(aprobado.progreso, 2, true, 90);
+  assert.doesNotMatch(p.mensaje, /Separé/);
 });
 
 test('"algo para llevarte": se guarda, se retoma y llega en el recordatorio', async () => {

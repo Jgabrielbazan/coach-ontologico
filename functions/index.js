@@ -13,6 +13,7 @@ import {
   mensajeRecordatorio,
 } from './recordatorios.js';
 import {
+  aplicarAvance,
   aplicarCoach,
   aplicarEvaluacion,
   aplicarFrase,
@@ -163,6 +164,12 @@ export const asignarTarea = onCall(async (request) => {
 export const dejarFrase = onCall(async (request) => {
   const uid = usuarioAutorizado(request);
   const { mensaje } = await actualizarProgreso(uid, (p) => aplicarFrase(p, request.data?.frase));
+  return { mensaje };
+});
+
+export const registrarAvance = onCall(async (request) => {
+  const uid = usuarioAutorizado(request);
+  const { mensaje } = await actualizarProgreso(uid, (p) => aplicarAvance(p, request.data));
   return { mensaje };
 });
 

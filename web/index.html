@@ -151,6 +151,24 @@
           <blockquote id="texto-frase"></blockquote>
         </section>
 
+        <section class="tarjeta tarjeta-evolucion" id="tarjeta-evolucion" hidden>
+          <h3>Tu evolución <span id="cuenta-evolucion" class="tenue"></span></h3>
+          <figure class="momento momento-antes">
+            <figcaption><span class="momento-etiqueta">Antes</span> <span id="fecha-antes" class="tenue"></span></figcaption>
+            <blockquote id="cita-antes"></blockquote>
+          </figure>
+          <figure class="momento momento-ahora" id="momento-ahora">
+            <figcaption><span class="momento-etiqueta">Ahora</span> <span id="fecha-ahora" class="tenue"></span></figcaption>
+            <blockquote id="cita-ahora"></blockquote>
+            <p id="distincion-ahora" class="distincion"></p>
+          </figure>
+          <p id="nota-evolucion" class="nota" hidden>Tu coach irá anotando aquí tus avances, con tus propias palabras.</p>
+          <details id="linea-evolucion" class="historial" hidden>
+            <summary>Ver toda tu línea de tiempo</summary>
+            <ol id="lista-evolucion" class="linea-tiempo"></ol>
+          </details>
+        </section>
+
         <section class="tarjeta tarjeta-tarea" id="tarjeta-tarea" hidden>
           <h3>Tu tarea <span id="fecha-tarea" class="tenue"></span></h3>
           <p id="texto-tarea"></p>
@@ -169,6 +187,7 @@
             <div>
               <p class="nivel-nombre">El Observador Inicial</p>
               <p class="nivel-desc">Hechos vs. juicios: descubre cómo interpretas la realidad.</p>
+              <button type="button" class="ver-certificado" data-nivel="1" hidden>Ver certificado</button>
             </div>
           </li>
           <li data-nivel="2">
@@ -176,6 +195,7 @@
             <div>
               <p class="nivel-nombre">El Diseñador de Realidades</p>
               <p class="nivel-desc">Hablar es actuar: declaraciones que abren posibilidades.</p>
+              <button type="button" class="ver-certificado" data-nivel="2" hidden>Ver certificado</button>
             </div>
           </li>
           <li data-nivel="3">
@@ -183,6 +203,7 @@
             <div>
               <p class="nivel-nombre">El Maestro de la Coherencia Corporal</p>
               <p class="nivel-desc">Lenguaje, emoción y cuerpo alineados.</p>
+              <button type="button" class="ver-certificado" data-nivel="3" hidden>Ver certificado</button>
             </div>
           </li>
         </ol>
@@ -249,6 +270,16 @@
           <video id="vista-camara" class="vista-camara" playsinline muted hidden></video>
         </div>
 
+        <div class="celebracion" id="celebracion" role="status" hidden>
+          <span class="celebracion-insignia" aria-hidden="true">✦</span>
+          <div class="celebracion-texto">
+            <p class="celebracion-titulo" id="celebracion-titulo"></p>
+            <p class="celebracion-bajada" id="celebracion-bajada"></p>
+          </div>
+          <button type="button" class="boton-certificado" id="boton-ver-certificado">Ver tu certificado</button>
+          <button type="button" class="celebracion-cerrar" id="cerrar-celebracion" aria-label="Cerrar">×</button>
+        </div>
+
         <p class="estado" id="estado" role="status">Toca el orbe para hablar con tu coach</p>
         <div class="medidor" id="medidor" hidden aria-hidden="true"><span id="medidor-barra"></span></div>
 
@@ -283,6 +314,15 @@
         </section>
       </main>
     </div>
+
+    <dialog class="dialogo-certificado" id="dialogo-certificado" aria-label="Certificado de nivel">
+      <canvas id="lienzo-certificado" class="lienzo-certificado" width="1600" height="1130" role="img"></canvas>
+      <div class="acciones-certificado">
+        <button type="button" id="descargar-certificado" class="boton-certificado">Descargar imagen</button>
+        <button type="button" id="compartir-certificado" class="boton-fantasma" hidden>Compartir</button>
+        <button type="button" id="cerrar-certificado" class="boton-fantasma">Cerrar</button>
+      </div>
+    </dialog>
 
     <script type="module" src="./main.js"></script>
   </body>

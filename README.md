@@ -19,6 +19,12 @@ en la PC y en el móvil, cada una por su cuenta. Entras con tu cuenta de Google 
 - **Coach con oficio:** contrato de sesión, preguntas poderosas, distinciones de la
   ontología del lenguaje. Dos perfiles: Sofía y Tomás.
 - **Tareas entre sesiones:** el coach deja una práctica, anotas cómo te fue y la retoma.
+- **Tu evolución:** el coach guarda frases tuyas textuales (punto de partida y avances) y
+  la app muestra el "antes" frente al "ahora", con toda la línea de tiempo.
+- **Reconocimiento:** al empezar y al cerrar, el coach nombra un avance concreto que notó,
+  comparando con tus propias palabras (sin elogios genéricos ni inventados).
+- **Ceremonia de nivel:** al aprobar, el coach hace un cierre emotivo del recorrido, la esfera
+  celebra y recibes un certificado con tus frases destacadas, para descargar o compartir.
 - **Recordatorio diario** por notificación (en iPhone, con la app instalada).
 - **Control de gasto:** minutos y costo estimado del mes, límite por sesión
   (`LIMITE_SESION_MIN`) y por mes (`LIMITE_MENSUAL_MIN`) en `functions/.env.agent-ontologico`.

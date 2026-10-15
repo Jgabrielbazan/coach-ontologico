@@ -1,5 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import { Camara, Microfono, Reproductor, listarMicrofonos } from './audio.js';
+import { dibujarCertificado } from './certificado.js';
 import { Orbe } from './orbe.js';
 import { alCambiarUsuario, entrarConGoogle, escucharProgreso, iniciarFirebase, llamar, salir } from './firebase.js';
 
@@ -64,6 +65,28 @@ const ui = {
   selectorMicrofono: $('selector-microfono'),
   medidor: $('medidor'),
   medidorBarra: $('medidor-barra'),
+  tarjetaEvolucion: $('tarjeta-evolucion'),
+  cuentaEvolucion: $('cuenta-evolucion'),
+  citaAntes: $('cita-antes'),
+  fechaAntes: $('fecha-antes'),
+  momentoAhora: $('momento-ahora'),
+  citaAhora: $('cita-ahora'),
+  fechaAhora: $('fecha-ahora'),
+  distincionAhora: $('distincion-ahora'),
+  notaEvolucion: $('nota-evolucion'),
+  lineaEvolucion: $('linea-evolucion'),
+  listaEvolucion: $('lista-evolucion'),
+  botonesCertificado: document.querySelectorAll('.ver-certificado'),
+  celebracion: $('celebracion'),
+  celebracionTitulo: $('celebracion-titulo'),
+  celebracionBajada: $('celebracion-bajada'),
+  verCertificado: $('boton-ver-certificado'),
+  cerrarCelebracion: $('cerrar-celebracion'),
+  dialogoCertificado: $('dialogo-certificado'),
+  lienzoCertificado: $('lienzo-certificado'),
+  descargarCertificado: $('descargar-certificado'),
+  compartirCertificado: $('compartir-certificado'),
+  cerrarCertificado: $('cerrar-certificado'),
 };
 
 const NOMBRES_COACH = { femenino: 'Sofía', masculino: 'Tomás' };
@@ -80,15 +103,19 @@ const PROGRESO_INICIAL = {
   sesiones: [],
   tareas: [],
   frases: [],
+  evolucion: [],
   coach: 'femenino',
 };
 
 const TEXTO_INICIO = {
-  programa: '[Inicio de sesión: saluda en una frase y continúa el programa donde corresponde.]',
+  programa:
+    '[Inicio de sesión: saluda en una frase; si en "Tu evolución" hay un avance concreto, reconócelo en una frase ' +
+    'comparando el antes con el ahora; y continúa el programa donde corresponde.]',
   practica: '[Inicio de práctica libre: saluda en una frase y empieza con tus preguntas de contexto sobre la situación.]',
 };
 const TEXTO_CIERRE =
-  '[La sesión termina ahora: llama a asignar_tarea, luego a dejar_frase y dísela en voz alta, ' +
+  '[La sesión termina ahora: si notaste un avance concreto en esta sesión, nómbralo en una frase; ' +
+  'llama a asignar_tarea, luego a dejar_frase y dísela en voz alta, ' +
   'luego a guardar_resumen_sesion, y despídete en una frase.]';
 const MAX_REINTENTOS = 3;
 
@@ -122,9 +149,12 @@ let modo = 'programa'; // 'programa' o 'practica'
 let situacionActiva = ''; // la situación de la práctica en curso
 let diagnostico = null; // intervalo que vigila si tu voz llega al coach
 let avisoMicrofono = '';
+let nombreUsuario = '';
+let nivelVisto = null; // nivel del último progreso mostrado, para detectar cuándo se aprueba uno
+let certificadoAbierto = null;
 
 new Orbe($('orbe-entrar'), { obtenerEstado: () => 'inactivo' });
-new Orbe($('orbe-coach'), {
+const orbeCoach = new Orbe($('orbe-coach'), {
   obtenerEstado: () => estadoVisual,
   obtenerNivel: () => (estadoVisual === 'hablando' ? reproductor.nivel() : (microfono?.nivel() ?? 0)),
 });
@@ -190,6 +220,12 @@ function mostrarProgreso(datos) {
       }),
   );
 
+  mostrarEvolucion(p.evolucion);
+  for (const boton of ui.botonesCertificado) {
+    boton.hidden = !p.evaluaciones.some((e) => e.nivel === Number(boton.dataset.nivel) && e.aprobado);
+  }
+  detectarAprobacion(p);
+
   const frase = p.frases.at(-1);
   ui.tarjetaFrase.hidden = !frase;
   if (frase) {
@@ -221,6 +257,152 @@ function mostrarProgreso(datos) {
     ui.fechaSesion.textContent = fechaCorta.format(new Date(sesion.fecha));
   }
 }
+
+/** Tiempo entre dos fechas, en palabras: "5 días después", "3 semanas después". */
+function distancia(desde, hasta) {
+  const dias = Math.round((new Date(hasta) - new Date(desde)) / 86400000);
+  if (dias < 1) return 'el mismo día';
+  if (dias < 14) return `${dias} ${dias === 1 ? 'día' : 'días'} después`;
+  if (dias < 60) return `${Math.round(dias / 7)} semanas después`;
+  return `${Math.round(dias / 30)} meses después`;
+}
+
+/** "Tu evolución": tu frase del punto de partida frente al último avance, y la línea de tiempo completa. */
+function mostrarEvolucion(evolucion) {
+  ui.tarjetaEvolucion.hidden = !evolucion.length;
+  if (!evolucion.length) return;
+  const antes = evolucion.find((a) => a.tipo === 'partida') ?? evolucion[0];
+  const ahora = evolucion.findLast((a) => a.tipo === 'avance' && a !== antes && a.fecha >= antes.fecha);
+  ui.cuentaEvolucion.textContent = `${evolucion.length} ${evolucion.length === 1 ? 'momento' : 'momentos'}`;
+  ui.citaAntes.textContent = antes.cita;
+  ui.fechaAntes.textContent = fechaCorta.format(new Date(antes.fecha));
+  ui.momentoAhora.hidden = !ahora;
+  ui.notaEvolucion.hidden = Boolean(ahora);
+  if (ahora) {
+    ui.citaAhora.textContent = ahora.cita;
+    ui.fechaAhora.textContent = `${fechaCorta.format(new Date(ahora.fecha))} · ${distancia(antes.fecha, ahora.fecha)}`;
+    ui.distincionAhora.textContent = ahora.distincion;
+    ui.distincionAhora.hidden = !ahora.distincion;
+  }
+  ui.lineaEvolucion.hidden = evolucion.length < 3;
+  ui.listaEvolucion.replaceChildren(
+    ...evolucion.map((a) => {
+      const item = document.createElement('li');
+      item.className = a.tipo === 'partida' ? 'partida' : 'avance';
+      const encabezado = document.createElement('span');
+      encabezado.className = 'linea-fecha';
+      encabezado.textContent = `${fechaCorta.format(new Date(a.fecha))} · Nivel ${a.nivel} · ${a.tipo === 'partida' ? 'Punto de partida' : 'Avance'}`;
+      const cita = document.createElement('q');
+      cita.textContent = a.cita;
+      item.append(encabezado, cita);
+      if (a.distincion) {
+        const distincion = document.createElement('small');
+        distincion.textContent = a.distincion;
+        item.append(distincion);
+      }
+      return item;
+    }),
+  );
+}
+
+// ---------- Ceremonia de nivel y certificado ----------
+
+/** Compara con el progreso anterior: si se acaba de aprobar un nivel, lo celebra. */
+function detectarAprobacion(p) {
+  const antes = nivelVisto;
+  nivelVisto = { nivel: p.nivel, completo: p.programaCompleto };
+  if (!antes) return; // primera carga: nada que celebrar
+  if (p.programaCompleto && !antes.completo) celebrarNivel(3);
+  else if (p.nivel > antes.nivel) celebrarNivel(p.nivel - 1);
+}
+
+function celebrarNivel(nivel) {
+  orbeCoach.celebrar();
+  navigator.vibrate?.([60, 40, 140]);
+  ui.celebracionTitulo.textContent = nivel === 3 ? '¡Programa completo!' : `¡Nivel ${nivel} aprobado!`;
+  ui.celebracionBajada.textContent =
+    nivel === 3 ? 'Aprobaste los tres niveles. Tu certificado te espera.' : `${NIVELES[nivel]} · Tu certificado te espera.`;
+  ui.celebracion.dataset.nivel = String(nivel);
+  ui.celebracion.hidden = false;
+}
+
+function datosCertificado(p, nivel) {
+  const evaluacion = p.evaluaciones.findLast((e) => e.nivel === nivel && e.aprobado);
+  if (!evaluacion) return null;
+  // Solo los avances: las frases del punto de partida no van en un certificado.
+  const citas = p.evolucion
+    .filter((a) => a.nivel === nivel && a.tipo === 'avance')
+    .slice(-3)
+    .map((a) => a.cita);
+  return {
+    nivel,
+    nombreNivel: NIVELES[nivel],
+    completo: nivel === 3,
+    nombre: nombreUsuario,
+    fecha: evaluacion.fecha,
+    puntuacion: evaluacion.puntuacion,
+    citas,
+    logros: (evaluacion.criterios ?? []).filter((c) => c.cumplido).map((c) => c.texto),
+    coach: NOMBRES_COACH[p.coach] ?? 'Tu coach',
+  };
+}
+
+async function abrirCertificado(nivel) {
+  const datos = datosCertificado(progresoActual, nivel);
+  if (!datos) return;
+  certificadoAbierto = datos;
+  await dibujarCertificado(ui.lienzoCertificado, datos);
+  ui.lienzoCertificado.setAttribute(
+    'aria-label',
+    `Certificado del Nivel ${nivel}, ${datos.nombreNivel}, otorgado a ${datos.nombre} con ${datos.puntuacion}/100`,
+  );
+  ui.compartirCertificado.hidden = !puedeCompartirImagen();
+  if (!ui.dialogoCertificado.open) ui.dialogoCertificado.showModal();
+}
+
+function puedeCompartirImagen() {
+  try {
+    return Boolean(navigator.canShare?.({ files: [new File([''], 'prueba.png', { type: 'image/png' })] }));
+  } catch {
+    return false;
+  }
+}
+
+function archivoCertificado() {
+  return new Promise((listo) =>
+    ui.lienzoCertificado.toBlob(
+      (blob) => listo(new File([blob], `certificado-nivel-${certificadoAbierto.nivel}.png`, { type: 'image/png' })),
+      'image/png',
+    ),
+  );
+}
+
+for (const boton of ui.botonesCertificado) {
+  boton.addEventListener('click', () => abrirCertificado(Number(boton.dataset.nivel)));
+}
+ui.verCertificado.addEventListener('click', () => abrirCertificado(Number(ui.celebracion.dataset.nivel)));
+ui.cerrarCelebracion.addEventListener('click', () => (ui.celebracion.hidden = true));
+ui.cerrarCertificado.addEventListener('click', () => ui.dialogoCertificado.close());
+// Tocar fuera del certificado también lo cierra.
+ui.dialogoCertificado.addEventListener('click', (e) => e.target === ui.dialogoCertificado && ui.dialogoCertificado.close());
+
+ui.descargarCertificado.addEventListener('click', async () => {
+  const archivo = await archivoCertificado();
+  const url = URL.createObjectURL(archivo);
+  const enlace = document.createElement('a');
+  enlace.href = url;
+  enlace.download = archivo.name;
+  enlace.click();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+});
+
+ui.compartirCertificado.addEventListener('click', async () => {
+  const archivo = await archivoCertificado();
+  const { nivel, nombreNivel } = certificadoAbierto;
+  navigator
+    .share({ files: [archivo], title: 'Mi certificado', text: `Aprobé el Nivel ${nivel} del Coach Ontológico: ${nombreNivel}.` })
+    .catch(() => {}); // cancelar el menú de compartir no es un error
+});
 
 function leerTexto(clave) {
   try {
@@ -386,6 +568,14 @@ async function ejecutarHerramienta({ name, args = {} }) {
     }
     case 'dejar_frase': {
       const { mensaje } = await llamar('dejarFrase', { frase: args.frase });
+      return { resultado: mensaje };
+    }
+    case 'registrar_avance': {
+      const { mensaje } = await llamar('registrarAvance', {
+        cita: args.cita,
+        tipo: args.tipo,
+        distincion: args.distincion,
+      });
       return { resultado: mensaje };
     }
     case 'guardar_resumen_sesion': {
@@ -1023,9 +1213,12 @@ async function arrancar() {
   alCambiarUsuario((usuario) => {
     dejarDeEscuchar?.();
     dejarDeEscuchar = null;
+    nivelVisto = null;
+    ui.celebracion.hidden = true;
     mostrarPantalla(Boolean(usuario));
     if (!usuario) return;
     ui.cuenta.textContent = usuario.email;
+    nombreUsuario = usuario.displayName || usuario.email.split('@')[0];
     cargarMicrofonos();
     prepararRecordatorios();
     actualizarEstado();

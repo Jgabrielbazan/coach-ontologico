@@ -30,10 +30,16 @@ const TEMAS = {
   },
 };
 
+// Colores de la celebración al aprobar un nivel: oro, rosa y violeta.
+TEMAS.dia.paletas.celebracion = ['#b45309', '#db2777', '#7c3aed'];
+TEMAS.noche.paletas.celebracion = ['#fcd34d', '#f9a8d4', '#c4b5fd'];
+
 const hexARgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
 for (const tema of Object.values(TEMAS)) {
   for (const estado of Object.keys(tema.paletas)) tema.paletas[estado] = tema.paletas[estado].map(hexARgb);
 }
+
+const DURACION_CELEBRACION = 6; // segundos
 const temaActual = () => (document.documentElement.dataset.tema === 'noche' ? TEMAS.noche : TEMAS.dia);
 const rgba = ([r, g, b], a) => `rgba(${r | 0}, ${g | 0}, ${b | 0}, ${a})`;
 
@@ -63,6 +69,8 @@ export class Orbe {
     this.pulsos = [];
     this.proximoPulso = 0;
     this.colores = temaActual().paletas.inactivo.map((c) => [...c]);
+    this.celebracion = null; // { inicio, chispas } mientras dura la celebración
+    this.pedidoCelebrar = false;
     this.movimientoReducido = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     new ResizeObserver(() => this.ajustar()).observe(lienzo);
@@ -96,6 +104,11 @@ export class Orbe {
     }
   }
 
+  /** Festejo al aprobar un nivel: estallido de chispas, pulsos y colores dorados. */
+  celebrar() {
+    this.pedidoCelebrar = true;
+  }
+
   cuadro(segundos) {
     const { ctx, ancho, alto } = this;
     if (!ancho || !alto || !this.esfera) return;
@@ -104,21 +117,43 @@ export class Orbe {
     const dt = Math.min(0.05, segundos - this.anterior) * lento;
     this.anterior = segundos;
 
+    // Celebración: arranca en este cuadro y se apaga sola.
+    if (this.pedidoCelebrar) {
+      this.pedidoCelebrar = false;
+      const chispas = [];
+      for (let i = 0; i < 320; i++) {
+        const y = Math.random() * 2 - 1;
+        const a = Math.random() * Math.PI * 2;
+        const r = Math.sqrt(1 - y * y);
+        chispas.push([Math.cos(a) * r, y, Math.sin(a) * r, 0.35 + Math.random() * 0.65, (Math.random() * 3) | 0]);
+      }
+      this.celebracion = { inicio: t, chispas };
+    }
+    let avanceFiesta = 1;
+    let fiesta = 0; // intensidad 0-1: sube rápido y baja despacio
+    if (this.celebracion) {
+      avanceFiesta = (t - this.celebracion.inicio) / DURACION_CELEBRACION;
+      if (avanceFiesta >= 1) this.celebracion = null;
+      else fiesta = avanceFiesta < 0.08 ? avanceFiesta / 0.08 : 1 - ((avanceFiesta - 0.08) / 0.92) ** 2;
+    }
+
     // Estado, colores (con transición suave) y energía de la voz.
     const tema = temaActual();
     const estado = this.obtenerEstado();
-    const destino = tema.paletas[estado] ?? tema.paletas.inactivo;
-    this.colores.forEach((c, i) => c.forEach((v, j) => (c[j] = v + (destino[i][j] - v) * 0.05)));
+    const destino = fiesta > 0.15 ? tema.paletas.celebracion : (tema.paletas[estado] ?? tema.paletas.inactivo);
+    const suavidad = fiesta > 0.15 ? 0.12 : 0.05;
+    this.colores.forEach((c, i) => c.forEach((v, j) => (c[j] = v + (destino[i][j] - v) * suavidad)));
     const crudo = this.obtenerNivel();
     this.nivel += (crudo - this.nivel) * (crudo > this.nivel ? 0.35 : 0.07);
     let objetivo = this.nivel;
     if (estado === 'conectando') objetivo = 0.25 + 0.2 * Math.sin(t * 5);
     if (estado === 'inactivo') objetivo = 0.06;
     if (estado === 'silenciado') objetivo = 0.02;
+    objetivo = Math.max(objetivo, fiesta * 0.55);
     this.energia += (objetivo - this.energia) * 0.08;
     const e = this.energia;
 
-    this.giro += dt * (0.14 + e * 0.5);
+    this.giro += dt * (0.14 + e * 0.5 + fiesta * 0.9);
     const inclinacion = 0.38 + Math.sin(t * 0.17) * 0.08;
     const [cy0, sy0] = [Math.cos(this.giro), Math.sin(this.giro)];
     const [cx0, sx0] = [Math.cos(inclinacion), Math.sin(inclinacion)];
@@ -152,8 +187,11 @@ export class Orbe {
 
     ctx.globalCompositeOperation = tema.mezcla;
 
-    // 2) Pulsos de energía cuando el coach habla.
-    if (estado === 'hablando' && t > this.proximoPulso && e > 0.08) {
+    // 2) Pulsos de energía cuando el coach habla (y seguidos durante la celebración).
+    if (fiesta > 0.2 && t > this.proximoPulso) {
+      this.pulsos.push({ inicio: t });
+      this.proximoPulso = t + 0.32;
+    } else if (estado === 'hablando' && t > this.proximoPulso && e > 0.08) {
       this.pulsos.push({ inicio: t });
       this.proximoPulso = t + 0.55 - Math.min(0.3, e * 0.4);
     }
@@ -257,6 +295,20 @@ export class Orbe {
 
     // 6) Anillos: la mitad delantera, por encima de la esfera.
     dibujarAnillos(true);
+
+    // 7) Chispas de la celebración: salen de la superficie hacia afuera y se apagan.
+    if (this.celebracion) {
+      const salida = 1 - (1 - Math.min(1, avanceFiesta * 1.6)) ** 3;
+      const alfa = (1 - avanceFiesta) ** 1.4;
+      for (const [x, y, z, velocidad, color] of this.celebracion.chispas) {
+        const radio = 1.04 + salida * velocidad * 0.6;
+        const [px, py, pz, p] = proyectar(x, y, z, radio);
+        const delante = (pz + 1) / 2;
+        ctx.fillStyle = rgba(this.colores[color], alfa * (0.35 + delante * 0.65));
+        const tam = (1.2 + delante * 1.8) * p;
+        ctx.fillRect(px - tam / 2, py - tam / 2, tam, tam);
+      }
+    }
 
     ctx.globalCompositeOperation = 'source-over';
   }
