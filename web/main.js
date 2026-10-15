@@ -13,6 +13,10 @@ const ui = {
   estado: $('estado'),
   video: $('vista-camara'),
   subtitulos: $('subtitulos'),
+  activarRecordatorio: $('activar-recordatorio'),
+  horaRecordatorio: $('hora-recordatorio'),
+  probarRecordatorio: $('probar-recordatorio'),
+  notaRecordatorio: $('nota-recordatorio'),
   selectorForma: $('selector-forma'),
   botonHablar: $('boton-hablar'),
   textoHablar: $('texto-hablar'),
@@ -184,6 +188,9 @@ function mostrarProgreso(datos) {
   }
 
   mostrarUso(p);
+  if (p.recordatorio?.hora !== undefined && document.activeElement !== ui.horaRecordatorio) {
+    ui.horaRecordatorio.value = String(p.recordatorio.hora);
+  }
 
   const sesion = p.sesiones.at(-1);
   ui.tarjetaSesion.hidden = !sesion;
@@ -696,6 +703,99 @@ function finalizar(mensaje) {
 
 // ---------- Controles ----------
 
+// ---------- Recordatorios (notificaciones push) ----------
+
+ui.horaRecordatorio.value = '20';
+const pushDisponible = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+
+function avisoRecordatorio(texto) {
+  ui.notaRecordatorio.hidden = !texto;
+  ui.notaRecordatorio.textContent = texto ?? '';
+}
+
+/** La clave pública VAPID viene en base64url; el navegador la quiere en bytes. */
+function claveEnBytes(base64) {
+  const relleno = '='.repeat((4 - (base64.length % 4)) % 4);
+  const binario = atob((base64 + relleno).replace(/-/g, '+').replace(/_/g, '/'));
+  return Uint8Array.from(binario, (c) => c.charCodeAt(0));
+}
+
+async function suscripcionActual() {
+  const registro = await navigator.serviceWorker.getRegistration();
+  return registro?.pushManager.getSubscription() ?? null;
+}
+
+async function prepararRecordatorios() {
+  if (!pushDisponible) {
+    ui.activarRecordatorio.disabled = true;
+    avisoRecordatorio(
+      /iPhone|iPad/.test(navigator.userAgent)
+        ? 'En iPhone, instala la app en la pantalla de inicio para recibir recordatorios.'
+        : 'Este navegador no admite notificaciones.',
+    );
+    return;
+  }
+  const suscripcion = await suscripcionActual().catch(() => null);
+  ui.activarRecordatorio.checked = Boolean(suscripcion);
+  ui.probarRecordatorio.hidden = !suscripcion;
+}
+
+async function guardarRecordatorio(activo) {
+  const zona = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const hora = Number(ui.horaRecordatorio.value);
+  let suscripcion = await suscripcionActual();
+  if (activo) {
+    if ((await Notification.requestPermission()) !== 'granted') {
+      throw new Error('No diste permiso para notificaciones (puedes darlo en la configuración del sitio).');
+    }
+    if (!suscripcion) {
+      const { clavePublica } = await llamar('configPush');
+      const registro = await navigator.serviceWorker.ready;
+      suscripcion = await registro.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: claveEnBytes(clavePublica),
+      });
+    }
+  }
+  await llamar('guardarRecordatorio', { activo, hora, zona, suscripcion: suscripcion?.toJSON() });
+  if (!activo) await suscripcion?.unsubscribe();
+}
+
+ui.activarRecordatorio.addEventListener('change', async () => {
+  const activo = ui.activarRecordatorio.checked;
+  ui.activarRecordatorio.disabled = true;
+  try {
+    await guardarRecordatorio(activo);
+    avisoRecordatorio(activo ? `Listo: te aviso todos los días a las ${ui.horaRecordatorio.selectedOptions[0].text}.` : '');
+  } catch (err) {
+    ui.activarRecordatorio.checked = !activo;
+    avisoRecordatorio(err.message);
+  } finally {
+    ui.activarRecordatorio.disabled = false;
+    ui.probarRecordatorio.hidden = !ui.activarRecordatorio.checked;
+  }
+});
+
+ui.horaRecordatorio.addEventListener('change', async () => {
+  if (!ui.activarRecordatorio.checked) return;
+  try {
+    await guardarRecordatorio(true);
+    avisoRecordatorio(`Listo: te aviso todos los días a las ${ui.horaRecordatorio.selectedOptions[0].text}.`);
+  } catch (err) {
+    avisoRecordatorio(err.message);
+  }
+});
+
+ui.probarRecordatorio.addEventListener('click', async () => {
+  try {
+    const suscripcion = await suscripcionActual();
+    await llamar('probarRecordatorio', { suscripcion: suscripcion?.toJSON() });
+    avisoRecordatorio('Te mandé una notificación de prueba.');
+  } catch (err) {
+    avisoRecordatorio(err.message);
+  }
+});
+
 // ---------- Mantener para hablar ----------
 
 ui.selectorForma.value = hablaManual ? 'manual' : 'auto';
@@ -876,6 +976,7 @@ async function arrancar() {
     if (!usuario) return;
     ui.cuenta.textContent = usuario.email;
     cargarMicrofonos();
+    prepararRecordatorios();
     actualizarEstado();
     dejarDeEscuchar = escucharProgreso(usuario.uid, mostrarProgreso, (err) => {
       const mensaje =

@@ -158,3 +158,22 @@ test('mantener para hablar desactiva la detección automática', async () => {
   const auto = configuracionLive(progresoInicial());
   assert.equal(auto.realtimeInputConfig.automaticActivityDetection.disabled, undefined);
 });
+
+test('recordatorios: horario local, una vez por día y mensaje según la tarea', async () => {
+  const { aplicarRecordatorio, debeEnviar, horaLocal, mensajeRecordatorio } = await import('./recordatorios.js');
+  const { aplicarTarea } = await import('./progreso.js');
+  // 23:30 UTC = 20:30 en Buenos Aires (UTC-3).
+  const ahora = new Date('2026-10-15T23:30:00Z');
+  assert.deepEqual(horaLocal('America/Argentina/Buenos_Aires', ahora), { fecha: '2026-10-15', hora: 20 });
+  const rec = aplicarRecordatorio(progresoInicial(), { activo: true, hora: 20, zona: 'America/Argentina/Buenos_Aires' })
+    .progreso.recordatorio;
+  assert.equal(debeEnviar(rec, ahora).enviar, true);
+  assert.equal(debeEnviar({ ...rec, ultimoEnvio: '2026-10-15' }, ahora).enviar, false);
+  assert.equal(debeEnviar({ ...rec, hora: 8 }, ahora).enviar, false);
+  assert.equal(debeEnviar({ ...rec, activo: false }, ahora).enviar, false);
+  assert.equal(aplicarRecordatorio(progresoInicial(), { activo: true, hora: 99, zona: 'Marte/Base' }).progreso.recordatorio.zona, 'UTC');
+
+  assert.match(mensajeRecordatorio(progresoInicial()).cuerpo, /Nivel 1/);
+  const conTarea = aplicarTarea(progresoInicial(), 'Anota tres juicios por día.').progreso;
+  assert.match(mensajeRecordatorio(conTarea).titulo, /Sofía: ¿cómo vas con tu tarea\?/);
+});

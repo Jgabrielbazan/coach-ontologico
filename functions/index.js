@@ -6,6 +6,13 @@ import { defineInt, defineSecret, defineString } from 'firebase-functions/params
 import { GoogleGenAI } from '@google/genai';
 import { configuracionLive } from './coach.js';
 import {
+  aplicarRecordatorio,
+  clavesVapid,
+  enviarNotificacion,
+  idSuscripcion,
+  mensajeRecordatorio,
+} from './recordatorios.js';
+import {
   aplicarCoach,
   aplicarEvaluacion,
   aplicarReinicio,
@@ -157,6 +164,44 @@ export const registrarReflexion = onCall(async (request) => {
   const { id, reflexion } = request.data ?? {};
   const { mensaje } = await actualizarProgreso(uid, (p) => aplicarReflexion(p, id, reflexion));
   return { mensaje };
+});
+
+// ---------- Recordatorios (notificaciones push) ----------
+
+const suscripcionValida = (s) =>
+  typeof s?.endpoint === 'string' && s.endpoint.startsWith('https://') && s.keys?.p256dh && s.keys?.auth;
+
+/** Clave pública para que el navegador se suscriba a las notificaciones. */
+export const configPush = onCall(async (request) => {
+  usuarioAutorizado(request);
+  const { publicKey } = await clavesVapid(db);
+  return { clavePublica: publicKey };
+});
+
+/** Activa o desactiva el recordatorio diario y registra (o borra) la suscripción de este aparato. */
+export const guardarRecordatorio = onCall(async (request) => {
+  const uid = usuarioAutorizado(request);
+  const { activo, hora, zona, suscripcion } = request.data ?? {};
+  if (activo && !suscripcionValida(suscripcion)) {
+    throw new HttpsError('invalid-argument', 'Falta la suscripción a notificaciones de este aparato.');
+  }
+  await actualizarProgreso(uid, (p) => aplicarRecordatorio(p, { activo, hora, zona }));
+  if (suscripcionValida(suscripcion)) {
+    const ref = db.collection('suscripciones').doc(idSuscripcion(suscripcion));
+    if (activo) await ref.set({ uid, suscripcion, actualizada: new Date().toISOString() });
+    else await ref.delete();
+  }
+  return { mensaje: activo ? 'Recordatorio activado.' : 'Recordatorio desactivado.' };
+});
+
+/** Manda ya mismo una notificación de prueba a este aparato. */
+export const probarRecordatorio = onCall(async (request) => {
+  const uid = usuarioAutorizado(request);
+  const { suscripcion } = request.data ?? {};
+  if (!suscripcionValida(suscripcion)) throw new HttpsError('invalid-argument', 'Suscripción inválida.');
+  const resultado = await enviarNotificacion(await clavesVapid(db), suscripcion, mensajeRecordatorio(await leerProgreso(uid)));
+  if (resultado !== 'ok') throw new HttpsError('unavailable', 'No se pudo enviar la notificación de prueba.');
+  return { mensaje: 'Notificación enviada.' };
 });
 
 export const elegirCoach = onCall(async (request) => {

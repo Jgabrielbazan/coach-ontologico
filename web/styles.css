@@ -885,6 +885,66 @@ button {
   background: linear-gradient(135deg, #0891b2, #4f46e5);
 }
 
+.mas-ajustes summary {
+  cursor: pointer;
+  font-size: 0.82rem;
+  color: var(--texto-suave);
+  padding: 4px 0;
+}
+
+.mas-ajustes[open] {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.recordatorio {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--borde);
+  background: var(--vidrio);
+}
+
+.interruptor {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.interruptor input {
+  width: 18px;
+  height: 18px;
+  accent-color: #7c5cf0;
+}
+
+.recordatorio-fila {
+  display: flex;
+  gap: 8px;
+}
+
+.recordatorio-fila select {
+  flex: 1;
+  min-height: 36px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid var(--borde);
+  background: var(--vidrio-fuerte);
+  color: var(--texto);
+  font: inherit;
+  font-size: 0.85rem;
+}
+
+.nota {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--texto-suave);
+}
+
 .campo-microfono {
   display: flex;
   flex-direction: column;

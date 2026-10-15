@@ -62,7 +62,8 @@
         "node_modules",
         "*.test.js",
         ".secret.local",
-        ".env.local"
+        ".env.local",
+        "enviar-recordatorios.js"
       ]
     }
   ],

@@ -10,6 +10,21 @@ en la PC y en el móvil, cada una por su cuenta. Entras con tu cuenta de Google 
 | 2 | El Diseñador de Realidades | Actos lingüísticos y declaraciones |
 | 3 | El Maestro de la Coherencia Corporal | Lenguaje, emoción y cuerpo (con cámara opcional) |
 
+## Qué incluye
+
+- **Programa de 3 niveles** con evaluaciones por criterios explícitos (✓/✗ con evidencia).
+  Sube de nivel solo si se cumplen todos los criterios y la puntuación mínima.
+- **Práctica libre:** ensayas una situación real y el coach hace de la otra persona
+  (di "pausa" para pedir una indicación).
+- **Coach con oficio:** contrato de sesión, preguntas poderosas, distinciones de la
+  ontología del lenguaje. Dos perfiles: Sofía y Tomás.
+- **Tareas entre sesiones:** el coach deja una práctica, anotas cómo te fue y la retoma.
+- **Recordatorio diario** por notificación (en iPhone, con la app instalada).
+- **Control de gasto:** minutos y costo estimado del mes, límite por sesión
+  (`LIMITE_SESION_MIN`) y por mes (`LIMITE_MENSUAL_MIN`) en `functions/.env.agent-ontologico`.
+- **Manos libres o "mantener para hablar"** (botón o barra espaciadora), selector de
+  micrófono, chat escrito, modo día/noche.
+
 ## Cómo funciona
 
 ```

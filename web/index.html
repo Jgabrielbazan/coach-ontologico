@@ -98,6 +98,38 @@
               <span><strong>Tomás</strong><small>Claro y sereno</small></span>
             </button>
           </div>
+          <details class="mas-ajustes">
+            <summary>Ajustes: recordatorio, forma de hablar y micrófono</summary>
+          <div class="recordatorio" id="bloque-recordatorio">
+            <label class="interruptor">
+              <input type="checkbox" id="activar-recordatorio" />
+              <span>Recordatorio diario en este aparato</span>
+            </label>
+            <div class="recordatorio-fila">
+              <select id="hora-recordatorio" aria-label="Hora del recordatorio">
+              <option value="6">06:00</option>
+              <option value="7">07:00</option>
+              <option value="8">08:00</option>
+              <option value="9">09:00</option>
+              <option value="10">10:00</option>
+              <option value="11">11:00</option>
+              <option value="12">12:00</option>
+              <option value="13">13:00</option>
+              <option value="14">14:00</option>
+              <option value="15">15:00</option>
+              <option value="16">16:00</option>
+              <option value="17">17:00</option>
+              <option value="18">18:00</option>
+              <option value="19">19:00</option>
+              <option value="20">20:00</option>
+              <option value="21">21:00</option>
+              <option value="22">22:00</option>
+              <option value="23">23:00</option>
+              </select>
+              <button type="button" id="probar-recordatorio" class="boton-fantasma" hidden>Probar</button>
+            </div>
+            <p id="nota-recordatorio" class="nota" hidden></p>
+          </div>
           <label class="campo-microfono">
             <span>Forma de hablar</span>
             <select id="selector-forma">
@@ -111,6 +143,7 @@
               <option value="">Predeterminado del sistema</option>
             </select>
           </label>
+          </details>
         </section>
 
         <section class="tarjeta tarjeta-tarea" id="tarjeta-tarea" hidden>
