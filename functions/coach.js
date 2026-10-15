@@ -212,9 +212,10 @@ const HERRAMIENTAS_PRACTICA = [
 
 /**
  * @param {object} progreso
- * @param {{ modo?: 'programa' | 'practica', situacion?: string }} [opciones]
+ * @param {{ modo?: 'programa' | 'practica', situacion?: string, manual?: boolean }} [opciones]
+ *   manual: "mantener para hablar"; la app marca el inicio y el fin de cada turno.
  */
-export function configuracionLive(progreso, { modo = 'programa', situacion = '' } = {}) {
+export function configuracionLive(progreso, { modo = 'programa', situacion = '', manual = false } = {}) {
   const practica = modo === 'practica';
   return {
     responseModalities: ['AUDIO'],
@@ -226,11 +227,13 @@ export function configuracionLive(progreso, { modo = 'programa', situacion = '' 
     inputAudioTranscription: {},
     outputAudioTranscription: {},
     realtimeInputConfig: {
-      automaticActivityDetection: {
-        // Tolera pausas breves para pensar. Más de ~1,5 s, o sensibilidad baja,
-        // hace que con ruido de fondo nunca detecte que terminaste de hablar.
-        silenceDurationMs: Number(process.env.SILENCIO_MS) || 1000,
-      },
+      automaticActivityDetection: manual
+        ? { disabled: true }
+        : {
+            // Tolera pausas breves para pensar. Más de ~1,5 s, o sensibilidad baja,
+            // hace que con ruido de fondo nunca detecte que terminaste de hablar.
+            silenceDurationMs: Number(process.env.SILENCIO_MS) || 1000,
+          },
     },
     // Sin compresión, las sesiones con vídeo se cortan a los 2 minutos.
     contextWindowCompression: { slidingWindow: {} },

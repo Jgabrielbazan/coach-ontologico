@@ -116,7 +116,7 @@ export const crearSesion = onCall({ secrets: [GEMINI_API_KEY] }, async (request)
   return {
     token: token.name,
     modelo: GEMINI_MODEL.value(),
-    config: configuracionLive(progreso, { modo, situacion }),
+    config: configuracionLive(progreso, { modo, situacion, manual: request.data?.manual === true }),
     limites: { sesionMin: LIMITE_SESION_MIN.value(), mensualMin: limiteMensual },
   };
 });

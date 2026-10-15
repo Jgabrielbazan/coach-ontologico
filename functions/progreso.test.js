@@ -150,3 +150,11 @@ test('evaluación: un criterio sin cumplir impide aprobar aunque el puntaje alca
   assert.equal(guardada.criterios[1].cumplido, false);
   assert.equal(guardada.criterios[0].evidencia, '4 de 5 bien');
 });
+
+test('mantener para hablar desactiva la detección automática', async () => {
+  const { configuracionLive } = await import('./coach.js');
+  const manual = configuracionLive(progresoInicial(), { manual: true });
+  assert.deepEqual(manual.realtimeInputConfig.automaticActivityDetection, { disabled: true });
+  const auto = configuracionLive(progresoInicial());
+  assert.equal(auto.realtimeInputConfig.automaticActivityDetection.disabled, undefined);
+});

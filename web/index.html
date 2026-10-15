@@ -99,6 +99,13 @@
             </button>
           </div>
           <label class="campo-microfono">
+            <span>Forma de hablar</span>
+            <select id="selector-forma">
+              <option value="auto">Manos libres (detecta cuándo hablas)</option>
+              <option value="manual">Mantener para hablar (lugares con ruido)</option>
+            </select>
+          </label>
+          <label class="campo-microfono">
             <span>Micrófono</span>
             <select id="selector-microfono">
               <option value="">Predeterminado del sistema</option>
@@ -206,6 +213,11 @@
 
         <p class="estado" id="estado" role="status">Toca el orbe para hablar con tu coach</p>
         <div class="medidor" id="medidor" hidden aria-hidden="true"><span id="medidor-barra"></span></div>
+
+        <button type="button" class="boton-hablar" id="boton-hablar" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12h-2z"/></svg>
+          <span id="texto-hablar">Mantén apretado para hablar</span>
+        </button>
 
         <nav class="controles" id="controles" hidden>
           <button type="button" id="boton-silencio" class="control" aria-pressed="false">

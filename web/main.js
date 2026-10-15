@@ -13,6 +13,9 @@ const ui = {
   estado: $('estado'),
   video: $('vista-camara'),
   subtitulos: $('subtitulos'),
+  selectorForma: $('selector-forma'),
+  botonHablar: $('boton-hablar'),
+  textoHablar: $('texto-hablar'),
   resultadoEvaluacion: $('resultado-evaluacion'),
   criteriosEvaluacion: $('criterios-evaluacion'),
   historialEvaluaciones: $('historial-evaluaciones'),
@@ -88,6 +91,9 @@ let avisarResumenGuardado = null;
 let progresoActual = PROGRESO_INICIAL;
 let dejarDeEscuchar = null;
 let estadoVisual = 'inactivo';
+let hablaManual = leerTexto('forma-hablar') === 'manual'; // "mantener para hablar"
+let sesionManual = false; // la forma de hablar de la sesión en curso
+let apretado = false;
 // Costo estimado de Gemini Live por minuto de sesión: tu voz (0,005 USD/min, todo
 // el tiempo) + la del coach (0,018 USD/min, ~40 % del tiempo) + margen de contexto.
 const COSTO_POR_MINUTO_USD = 0.02;
@@ -188,6 +194,14 @@ function mostrarProgreso(datos) {
   }
 }
 
+function leerTexto(clave) {
+  try {
+    return localStorage.getItem(clave) ?? '';
+  } catch {
+    return '';
+  }
+}
+
 function leerNumero(clave, porDefecto) {
   try {
     return Number(localStorage.getItem(clave)) || porDefecto;
@@ -248,7 +262,9 @@ function actualizarEstado(mensaje) {
   else if (conectando) [estado, texto] = ['conectando', 'Conectando…'];
   else if (activa && reproductor.hablando)
     [estado, texto] = ['hablando', `${NOMBRES_COACH[progresoActual.coach] ?? 'Tu coach'} está hablando. Puedes interrumpirlo.`];
-  else if (activa && microfono?.silenciado) [estado, texto] = ['silenciado', 'Micrófono silenciado'];
+  else if (activa && microfono?.silenciado && !sesionManual) [estado, texto] = ['silenciado', 'Micrófono silenciado'];
+  else if (activa && sesionManual && !apretado)
+    [estado, texto] = ['inactivo', 'Mantén apretado el botón (o la barra espaciadora) para hablar'];
   else if (activa) [estado, texto] = ['escuchando', avisoMicrofono || 'Te escucho…'];
 
   estadoVisual = estado;
@@ -258,6 +274,9 @@ function actualizarEstado(mensaje) {
   ui.estado.textContent = mensaje ?? texto;
   ui.controles.hidden = !activa;
   ui.medidor.hidden = !activa;
+  ui.botonHablar.hidden = !activa || conectando || !sesionManual;
+  ui.silencio.hidden = sesionManual;
+  ui.selectorForma.disabled = activa;
   ui.panelPractica.hidden = activa || modo !== 'practica';
   for (const opcion of ui.opcionesModo) opcion.disabled = activa;
   for (const opcion of ui.opcionesCoach) opcion.disabled = activa;
@@ -400,6 +419,7 @@ async function conectar() {
   const { token, modelo, config, limites: limitesServidor } = await llamar('crearSesion', {
     modo,
     situacion: situacionActiva,
+    manual: sesionManual,
   });
   if (limitesServidor) {
     limites = limitesServidor;
@@ -481,6 +501,7 @@ async function iniciar() {
     ui.campoSituacion.focus();
     return;
   }
+  sesionManual = hablaManual;
   activa = true;
   conectando = true;
   reintentos = 0;
@@ -493,6 +514,8 @@ async function iniciar() {
   try {
     await reproductor.preparar();
     microfono = crearMicrofono();
+    // En "mantener para hablar" el micrófono solo transmite mientras apretás el botón.
+    microfono.silenciado = sesionManual;
     await microfono.iniciar();
     cargarMicrofonos(); // con permiso concedido ya se ven los nombres reales
     if (!(await conectar())) return;
@@ -658,6 +681,7 @@ function finalizar(mensaje) {
   sesion = null;
   microfono?.detener();
   microfono = null;
+  terminarDeHablar();
   detenerDiagnostico();
   registrarDuracion();
   apagarCamara();
@@ -671,6 +695,59 @@ function finalizar(mensaje) {
 }
 
 // ---------- Controles ----------
+
+// ---------- Mantener para hablar ----------
+
+ui.selectorForma.value = hablaManual ? 'manual' : 'auto';
+ui.selectorForma.addEventListener('change', () => {
+  hablaManual = ui.selectorForma.value === 'manual';
+  try {
+    localStorage.setItem('forma-hablar', ui.selectorForma.value);
+  } catch {}
+});
+
+function empezarAHablar() {
+  if (!sesion || !sesionManual || apretado) return;
+  apretado = true;
+  reproductor.cortar(); // hablar interrumpe al coach
+  sesion.sendRealtimeInput({ activityStart: {} });
+  microfono.silenciado = false;
+  ui.botonHablar.classList.add('apretado');
+  ui.textoHablar.textContent = 'Te escucho… suelta para enviar';
+  actualizarEstado();
+}
+
+function terminarDeHablar() {
+  if (!apretado) return;
+  apretado = false;
+  if (microfono) microfono.silenciado = true;
+  sesion?.sendRealtimeInput({ activityEnd: {} });
+  ui.botonHablar.classList.remove('apretado');
+  ui.textoHablar.textContent = 'Mantén apretado para hablar';
+  actualizarEstado();
+}
+
+ui.botonHablar.addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+  ui.botonHablar.setPointerCapture?.(e.pointerId);
+  empezarAHablar();
+});
+for (const evento of ['pointerup', 'pointercancel', 'lostpointercapture']) {
+  ui.botonHablar.addEventListener(evento, terminarDeHablar);
+}
+ui.botonHablar.addEventListener('contextmenu', (e) => e.preventDefault());
+
+// En PC: barra espaciadora (salvo que estés escribiendo en un campo).
+const escribiendo = () => ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName);
+document.addEventListener('keydown', (e) => {
+  if (e.code === 'Space' && !e.repeat && sesionManual && activa && !escribiendo()) {
+    e.preventDefault();
+    empezarAHablar();
+  }
+});
+document.addEventListener('keyup', (e) => {
+  if (e.code === 'Space' && sesionManual) terminarDeHablar();
+});
 
 function apagarCamara() {
   camara?.detener();
