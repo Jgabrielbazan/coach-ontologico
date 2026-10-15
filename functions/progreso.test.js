@@ -49,3 +49,24 @@ test('completa campos faltantes de documentos viejos', () => {
   assert.equal(r.progreso.nivel, 2);
   assert.deepEqual(r.progreso.evaluaciones, []);
 });
+
+test('elige coach y lo conserva al reiniciar', async () => {
+  const { aplicarCoach, aplicarReinicio } = await import('./progreso.js');
+  let p = progresoInicial();
+  assert.equal(p.coach, 'femenino');
+  p = aplicarCoach(p, 'masculino').progreso;
+  assert.equal(p.coach, 'masculino');
+  assert.equal(aplicarCoach(p, 'robot').cambio, false);
+  p = aplicarEvaluacion(p, { nivel: 1, aprobado: true, puntuacion: 90 }).progreso;
+  const reiniciado = aplicarReinicio(p).progreso;
+  assert.equal(reiniciado.nivel, 1);
+  assert.equal(reiniciado.coach, 'masculino');
+});
+
+test('las instrucciones usan la identidad del coach elegido', async () => {
+  const { instruccionesSistema, configuracionLive } = await import('./coach.js');
+  const masc = { ...progresoInicial(), coach: 'masculino' };
+  assert.match(instruccionesSistema(masc), /Te llamas Tomás/);
+  assert.equal(configuracionLive(masc).speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName, 'Charon');
+  assert.match(instruccionesSistema(progresoInicial()), /Te llamas Sofía/);
+});

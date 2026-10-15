@@ -1,5 +1,20 @@
 import { NIVEL_MAXIMO, PUNTUACION_MINIMA } from './progreso.js';
 
+export const PERFILES = {
+  femenino: {
+    nombre: 'Sofía',
+    voz: process.env.GEMINI_VOZ_FEMENINA || 'Kore',
+    identidad:
+      'Te llamas Sofía y eres una coach (mujer). Al hablar de ti usa siempre el femenino (por ejemplo: "estoy segura", "soy tu coach, encantada").',
+  },
+  masculino: {
+    nombre: 'Tomás',
+    voz: process.env.GEMINI_VOZ_MASCULINA || 'Charon',
+    identidad:
+      'Te llamas Tomás y eres un coach (hombre). Al hablar de ti usa siempre el masculino (por ejemplo: "estoy seguro", "soy tu coach, encantado").',
+  },
+};
+
 export const NIVELES = {
   1: 'El Observador Inicial',
   2: 'El Diseñador de Realidades',
@@ -84,8 +99,13 @@ function estadoUsuario(progreso) {
   return `## Estado del usuario\n${lineas.join('\n')}`;
 }
 
+export function perfilDe(progreso) {
+  return PERFILES[progreso.coach] ?? PERFILES.femenino;
+}
+
 export function instruccionesSistema(progreso) {
-  return [INSTRUCCIONES, BASE_CONOCIMIENTO, estadoUsuario(progreso)].join('\n\n');
+  const identidad = `## Quién eres\n${perfilDe(progreso).identidad}`;
+  return [identidad, INSTRUCCIONES, BASE_CONOCIMIENTO, estadoUsuario(progreso)].join('\n\n');
 }
 
 export const HERRAMIENTAS = [
@@ -131,15 +151,15 @@ export function configuracionLive(progreso) {
     systemInstruction: instruccionesSistema(progreso),
     tools: HERRAMIENTAS,
     speechConfig: {
-      voiceConfig: { prebuiltVoiceConfig: { voiceName: process.env.GEMINI_VOICE || 'Kore' } },
+      voiceConfig: { prebuiltVoiceConfig: { voiceName: perfilDe(progreso).voz } },
     },
     inputAudioTranscription: {},
     outputAudioTranscription: {},
     realtimeInputConfig: {
       automaticActivityDetection: {
-        // Tolera pausas reflexivas sin que el coach interrumpa.
-        silenceDurationMs: Number(process.env.SILENCIO_MS) || 1500,
-        endOfSpeechSensitivity: 'END_SENSITIVITY_LOW',
+        // Tolera pausas breves para pensar. Más de ~1,5 s, o sensibilidad baja,
+        // hace que con ruido de fondo nunca detecte que terminaste de hablar.
+        silenceDurationMs: Number(process.env.SILENCIO_MS) || 1000,
       },
     },
     // Sin compresión, las sesiones con vídeo se cortan a los 2 minutos.

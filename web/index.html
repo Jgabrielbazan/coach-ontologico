@@ -86,6 +86,26 @@
       </header>
 
       <aside class="camino" aria-labelledby="titulo-camino">
+        <section class="ajustes" aria-labelledby="titulo-coach">
+          <h2 id="titulo-coach" class="titulo-panel">Tu coach</h2>
+          <div class="selector-coach" role="radiogroup" aria-labelledby="titulo-coach">
+            <button type="button" role="radio" aria-checked="true" data-coach="femenino" class="opcion-coach">
+              <span class="avatar avatar-femenino" aria-hidden="true">S</span>
+              <span><strong>Sofía</strong><small>Firme y cercana</small></span>
+            </button>
+            <button type="button" role="radio" aria-checked="false" data-coach="masculino" class="opcion-coach">
+              <span class="avatar avatar-masculino" aria-hidden="true">T</span>
+              <span><strong>Tomás</strong><small>Claro y sereno</small></span>
+            </button>
+          </div>
+          <label class="campo-microfono">
+            <span>Micrófono</span>
+            <select id="selector-microfono">
+              <option value="">Predeterminado del sistema</option>
+            </select>
+          </label>
+        </section>
+
         <h2 id="titulo-camino" class="titulo-panel">Tu camino</h2>
         <ol class="niveles" id="niveles">
           <li data-nivel="1">
@@ -138,6 +158,7 @@
         </div>
 
         <p class="estado" id="estado" role="status">Toca el orbe para hablar con tu coach</p>
+        <div class="medidor" id="medidor" hidden aria-hidden="true"><span id="medidor-barra"></span></div>
 
         <nav class="controles" id="controles" hidden>
           <button type="button" id="boton-silencio" class="control" aria-pressed="false">

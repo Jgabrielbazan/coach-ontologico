@@ -319,19 +319,26 @@ button {
     'camino';
   gap: 16px;
   padding: max(12px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-bottom));
-  max-width: 1240px;
-  margin: 0 auto;
 }
 
+/* En pantallas anchas: panel pegado a la izquierda y el escenario ocupa el resto. */
 @media (min-width: 960px) {
   .coach {
-    grid-template-columns: 320px 1fr;
+    grid-template-columns: 340px 1fr;
     grid-template-rows: auto 1fr;
     grid-template-areas:
       'barra barra'
       'camino escenario';
-    gap: 24px 40px;
-    padding: 20px 32px 32px;
+    gap: 20px 48px;
+    padding: 20px 32px 32px 24px;
+  }
+
+  .camino {
+    position: sticky;
+    top: 20px;
+    max-height: calc(100dvh - 100px);
+    overflow-y: auto;
+    padding-right: 4px;
   }
 }
 
@@ -401,7 +408,7 @@ button {
 
 .orbe-zona {
   position: relative;
-  width: min(100%, 720px);
+  width: min(100%, 880px);
   aspect-ratio: 1 / 1;
   display: grid;
   place-items: center;
@@ -491,6 +498,25 @@ button {
   max-width: 46ch;
 }
 
+/* Medidor de tu voz: confirma que el micrófono capta sonido. */
+.medidor {
+  width: 140px;
+  height: 4px;
+  margin-top: 10px;
+  border-radius: 2px;
+  background: var(--borde);
+  overflow: hidden;
+}
+
+.medidor span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #0891b2, #7c5cf0);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.1s linear;
+}
+
 .vista-camara {
   position: absolute;
   right: 4%;
@@ -570,6 +596,98 @@ button {
 
 .subtitulos .usuario .quien {
   color: var(--subtitulo-usuario);
+}
+
+/* ---------- Ajustes: coach y micrófono ---------- */
+
+.ajustes {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.selector-coach {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.opcion-coach {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--borde);
+  background: var(--vidrio);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease, opacity 0.2s ease;
+}
+
+.opcion-coach strong {
+  display: block;
+  font-size: 0.92rem;
+}
+
+.opcion-coach small {
+  display: block;
+  color: var(--texto-suave);
+  font-size: 0.76rem;
+}
+
+.opcion-coach[aria-checked='true'] {
+  border-color: var(--actual-borde);
+  background: var(--actual-fondo);
+  box-shadow: 0 8px 24px var(--sombra);
+}
+
+.opcion-coach:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.avatar {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-family: var(--fuente-titulo);
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.avatar-femenino {
+  background: linear-gradient(135deg, #d946ef, #7c5cf0);
+}
+
+.avatar-masculino {
+  background: linear-gradient(135deg, #0891b2, #4f46e5);
+}
+
+.campo-microfono {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--texto-suave);
+}
+
+.campo-microfono select {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid var(--borde);
+  background: var(--vidrio);
+  color: var(--texto);
+  font: inherit;
+  font-size: 0.88rem;
 }
 
 /* ---------- Panel "Tu camino" ---------- */

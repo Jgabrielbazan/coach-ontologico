@@ -114,8 +114,9 @@ actualizan solas al volver a abrirlas.
 | Variable | Por defecto | Para qué |
 |---|---|---|
 | `GEMINI_MODEL` | `gemini-3.8-live` | Modelo de Gemini Live |
-| `GEMINI_VOICE` | `Kore` | Voz del coach (puedes oír las voces en AI Studio) |
-| `SILENCIO_MS` | `1500` | Silencio que espera antes de responder (pausas reflexivas) |
+| `GEMINI_VOZ_FEMENINA` | `Kore` | Voz de Sofía, la coach (puedes oír las voces en AI Studio) |
+| `GEMINI_VOZ_MASCULINA` | `Charon` | Voz de Tomás, el coach |
+| `SILENCIO_MS` | `1000` | Silencio que espera antes de responder (pausas reflexivas) |
 
 Después de cambiarlas, vuelve a publicar con `npm run deploy`.
 

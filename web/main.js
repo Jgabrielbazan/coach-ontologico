@@ -1,5 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
-import { Camara, Microfono, Reproductor } from './audio.js';
+import { Camara, Microfono, Reproductor, listarMicrofonos } from './audio.js';
 import { Orbe } from './orbe.js';
 import { alCambiarUsuario, entrarConGoogle, escucharProgreso, iniciarFirebase, llamar, salir } from './firebase.js';
 
@@ -30,14 +30,20 @@ const ui = {
   errorEntrar: $('error-entrar'),
   cuenta: $('cuenta'),
   salir: $('boton-salir'),
+  opcionesCoach: document.querySelectorAll('.opcion-coach'),
+  selectorMicrofono: $('selector-microfono'),
+  medidor: $('medidor'),
+  medidorBarra: $('medidor-barra'),
 };
+
+const NOMBRES_COACH = { femenino: 'Sofía', masculino: 'Tomás' };
 
 const NIVELES = {
   1: 'El Observador Inicial',
   2: 'El Diseñador de Realidades',
   3: 'El Maestro de la Coherencia Corporal',
 };
-const PROGRESO_INICIAL = { nivel: 1, programaCompleto: false, evaluaciones: [], sesiones: [] };
+const PROGRESO_INICIAL = { nivel: 1, programaCompleto: false, evaluaciones: [], sesiones: [], coach: 'femenino' };
 
 const TEXTO_INICIO = '[Inicio de sesión: saluda en una frase y continúa el programa donde corresponde.]';
 const TEXTO_CIERRE = '[La sesión termina ahora: llama a guardar_resumen_sesion y despídete en una frase.]';
@@ -58,6 +64,8 @@ let avisarResumenGuardado = null;
 let progresoActual = PROGRESO_INICIAL;
 let dejarDeEscuchar = null;
 let estadoVisual = 'inactivo';
+let diagnostico = null; // intervalo que vigila si tu voz llega al coach
+let avisoMicrofono = '';
 
 new Orbe($('orbe-entrar'), { obtenerEstado: () => 'inactivo' });
 new Orbe($('orbe-coach'), {
@@ -77,6 +85,9 @@ function ponerTexto(boton, texto) {
 function mostrarProgreso(datos) {
   const p = { ...PROGRESO_INICIAL, ...(datos ?? {}) };
   progresoActual = p;
+  for (const opcion of ui.opcionesCoach) {
+    opcion.setAttribute('aria-checked', String(opcion.dataset.coach === p.coach));
+  }
   ui.etiquetaNivel.textContent = p.programaCompleto ? 'Programa completo' : `Nivel ${p.nivel} de 3`;
   ui.nombreNivel.textContent = p.programaCompleto ? 'Coherencia integrada' : NIVELES[p.nivel];
   for (const item of ui.niveles.children) {
@@ -105,9 +116,10 @@ function actualizarEstado(mensaje) {
   let texto = 'Toca el orbe para hablar con tu coach';
   if (terminando) [estado, texto] = ['conectando', 'Cerrando la sesión…'];
   else if (conectando) [estado, texto] = ['conectando', 'Conectando…'];
-  else if (activa && reproductor.hablando) [estado, texto] = ['hablando', 'Tu coach está hablando. Puedes interrumpirlo.'];
+  else if (activa && reproductor.hablando)
+    [estado, texto] = ['hablando', `${NOMBRES_COACH[progresoActual.coach] ?? 'Tu coach'} está hablando. Puedes interrumpirlo.`];
   else if (activa && microfono?.silenciado) [estado, texto] = ['silenciado', 'Micrófono silenciado'];
-  else if (activa) [estado, texto] = ['escuchando', 'Te escucho…'];
+  else if (activa) [estado, texto] = ['escuchando', avisoMicrofono || 'Te escucho…'];
 
   estadoVisual = estado;
   ui.boton.dataset.estado = estado;
@@ -115,6 +127,8 @@ function actualizarEstado(mensaje) {
   ui.boton.disabled = terminando;
   ui.estado.textContent = mensaje ?? texto;
   ui.controles.hidden = !activa;
+  ui.medidor.hidden = !activa;
+  for (const opcion of ui.opcionesCoach) opcion.disabled = activa;
 }
 
 let ultimoHablante = null;
@@ -196,7 +210,14 @@ function alMensaje(mensaje) {
       reproductor.reproducir(parte.inlineData.data);
     }
   }
-  if (contenido.inputTranscription?.text) agregarSubtitulo('usuario', contenido.inputTranscription.text);
+  if (contenido.inputTranscription?.text) {
+    agregarSubtitulo('usuario', contenido.inputTranscription.text);
+    if (diagnostico) diagnostico.vozRecibida = true;
+    if (avisoMicrofono) {
+      avisoMicrofono = '';
+      actualizarEstado();
+    }
+  }
   if (contenido.outputTranscription?.text) agregarSubtitulo('coach', contenido.outputTranscription.text);
 }
 
@@ -280,10 +301,9 @@ async function iniciar() {
 
   try {
     await reproductor.preparar();
-    microfono = new Microfono((datos) =>
-      sesion?.sendRealtimeInput({ audio: { data: datos, mimeType: 'audio/pcm;rate=16000' } }),
-    );
+    microfono = crearMicrofono();
     await microfono.iniciar();
+    cargarMicrofonos(); // con permiso concedido ya se ven los nombres reales
     if (!(await conectar())) return;
   } catch (err) {
     console.error(err);
@@ -300,7 +320,92 @@ async function iniciar() {
     bloqueoPantalla = await navigator.wakeLock?.request('screen');
   } catch {}
   sesion.sendClientContent({ turns: [{ role: 'user', parts: [{ text: TEXTO_INICIO }] }], turnComplete: true });
+  iniciarDiagnostico();
   actualizarEstado();
+}
+
+// ---------- Micrófono: elección, medidor y diagnóstico ----------
+
+function leerMicrofonoGuardado() {
+  try {
+    return localStorage.getItem('microfono') ?? '';
+  } catch {
+    return '';
+  }
+}
+
+function crearMicrofono() {
+  return new Microfono(
+    (datos) => sesion?.sendRealtimeInput({ audio: { data: datos, mimeType: 'audio/pcm;rate=16000' } }),
+    leerMicrofonoGuardado(),
+  );
+}
+
+async function cargarMicrofonos() {
+  try {
+    const microfonos = await listarMicrofonos();
+    const elegido = leerMicrofonoGuardado();
+    ui.selectorMicrofono.replaceChildren(new Option('Predeterminado del sistema', ''));
+    microfonos.forEach((m, i) => {
+      if (m.deviceId === 'default' || m.deviceId === 'communications') return;
+      ui.selectorMicrofono.add(new Option(m.label || `Micrófono ${i + 1}`, m.deviceId, false, m.deviceId === elegido));
+    });
+  } catch {}
+}
+
+ui.selectorMicrofono.addEventListener('change', async () => {
+  try {
+    localStorage.setItem('microfono', ui.selectorMicrofono.value);
+  } catch {}
+  if (!microfono) return;
+  // Cambio en caliente durante la sesión.
+  const silenciado = microfono.silenciado;
+  microfono.detener();
+  microfono = crearMicrofono();
+  microfono.silenciado = silenciado;
+  try {
+    await microfono.iniciar();
+    if (diagnostico) Object.assign(diagnostico, { msVoz: 0, msEscuchando: 0, nivelMaximo: 0 });
+    avisoMicrofono = '';
+    actualizarEstado(`Usando: ${microfono.nombre || 'micrófono elegido'}`);
+  } catch (err) {
+    actualizarEstado(`No pude usar ese micrófono: ${err.message}`);
+  }
+});
+
+/**
+ * Vigila si tu voz llega: mueve el medidor y, si hablas y el coach no recibe
+ * nada (o del micrófono no llega sonido), muestra un aviso con qué revisar.
+ */
+function iniciarDiagnostico() {
+  clearInterval(diagnostico?.intervalo);
+  diagnostico = { msVoz: 0, msEscuchando: 0, nivelMaximo: 0, vozRecibida: false };
+  diagnostico.intervalo = setInterval(() => {
+    const nivel = microfono?.nivel() ?? 0;
+    ui.medidorBarra.style.transform = `scaleX(${Math.min(1, nivel * 1.6)})`;
+    if (estadoVisual !== 'escuchando' || diagnostico.vozRecibida) return;
+    diagnostico.msEscuchando += 100;
+    diagnostico.nivelMaximo = Math.max(diagnostico.nivelMaximo, nivel);
+    if (nivel > 0.06) diagnostico.msVoz += 100;
+
+    let aviso = '';
+    if (diagnostico.msEscuchando > 12000 && diagnostico.nivelMaximo < 0.02) {
+      aviso = `No llega sonido de «${microfono?.nombre || 'tu micrófono'}». Elige otro en «Micrófono».`;
+    } else if (diagnostico.msVoz > 6000) {
+      aviso = 'Te oigo en el micrófono, pero el coach aún no recibe tu voz. Prueba otro micrófono o habla más cerca.';
+    }
+    if (aviso !== avisoMicrofono) {
+      avisoMicrofono = aviso;
+      actualizarEstado();
+    }
+  }, 100);
+}
+
+function detenerDiagnostico() {
+  clearInterval(diagnostico?.intervalo);
+  diagnostico = null;
+  avisoMicrofono = '';
+  ui.medidorBarra.style.transform = 'scaleX(0)';
 }
 
 const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -334,6 +439,7 @@ function finalizar(mensaje) {
   sesion = null;
   microfono?.detener();
   microfono = null;
+  detenerDiagnostico();
   apagarCamara();
   reproductor.cortar();
   bloqueoPantalla?.release().catch(() => {});
@@ -388,6 +494,21 @@ ui.verTexto.addEventListener('click', () => {
   ui.verTexto.setAttribute('aria-pressed', String(!ui.subtitulos.hidden));
   ponerTexto(ui.verTexto, ui.subtitulos.hidden ? 'Texto' : 'Ocultar texto');
 });
+
+for (const opcion of ui.opcionesCoach) {
+  opcion.addEventListener('click', async () => {
+    if (activa || opcion.getAttribute('aria-checked') === 'true') return;
+    const anterior = progresoActual.coach;
+    mostrarProgreso({ ...progresoActual, coach: opcion.dataset.coach });
+    try {
+      await llamar('elegirCoach', { coach: opcion.dataset.coach });
+      actualizarEstado(`Tu coach ahora es ${NOMBRES_COACH[opcion.dataset.coach]}.`);
+    } catch (err) {
+      mostrarProgreso({ ...progresoActual, coach: anterior });
+      actualizarEstado(`No pude cambiar de coach: ${err.message}`);
+    }
+  });
+}
 
 ui.reiniciar.addEventListener('click', async () => {
   if (activa) return;
@@ -448,6 +569,7 @@ async function arrancar() {
     mostrarPantalla(Boolean(usuario));
     if (!usuario) return;
     ui.cuenta.textContent = usuario.email;
+    cargarMicrofonos();
     actualizarEstado();
     dejarDeEscuchar = escucharProgreso(usuario.uid, mostrarProgreso, (err) => {
       const mensaje =

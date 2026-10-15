@@ -5,7 +5,14 @@ import { HttpsError, onCall } from 'firebase-functions/https';
 import { defineSecret, defineString } from 'firebase-functions/params';
 import { GoogleGenAI } from '@google/genai';
 import { configuracionLive } from './coach.js';
-import { aplicarEvaluacion, aplicarResumen, normalizar, progresoInicial } from './progreso.js';
+import {
+  aplicarCoach,
+  aplicarEvaluacion,
+  aplicarReinicio,
+  aplicarResumen,
+  normalizar,
+  progresoInicial,
+} from './progreso.js';
 
 initializeApp();
 const db = getFirestore();
@@ -106,6 +113,12 @@ export const guardarResumen = onCall(async (request) => {
 
 export const reiniciarProgreso = onCall(async (request) => {
   const uid = usuarioAutorizado(request);
-  await documento(uid).set(progresoInicial());
-  return { mensaje: 'Programa reiniciado.' };
+  const { mensaje } = await actualizarProgreso(uid, aplicarReinicio);
+  return { mensaje };
+});
+
+export const elegirCoach = onCall(async (request) => {
+  const uid = usuarioAutorizado(request);
+  const { mensaje } = await actualizarProgreso(uid, (p) => aplicarCoach(p, request.data?.coach));
+  return { mensaje };
 });

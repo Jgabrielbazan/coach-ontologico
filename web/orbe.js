@@ -1,45 +1,49 @@
-// "Organismo" de fibras: cientos de partículas siguen un campo de flujo que gira
-// y dejan estelas largas y finas, como un ovillo de hilos de colores con puntos
-// de luz. La voz (tuya o del coach) lo agita, lo expande y lo hace más intenso.
+// Núcleo: una esfera 3D de miles de partículas, con malla holográfica, anillos
+// orbitales y un núcleo de luz. Gira despacio; la voz (tuya o del coach) hace
+// ondular su superficie y, cuando habla el coach, emite pulsos de energía.
 
-// Modo día: colores saturados que se superponen sobre fondo claro.
-const PALETAS_DIA = {
-  inactivo: ['#14b8a6', '#06b6d4', '#34d399', '#8b5cf6', '#d946ef', '#f472b6', '#6366f1', '#fb923c'],
-  conectando: ['#6366f1', '#06b6d4', '#8b5cf6', '#38bdf8', '#a78bfa', '#14b8a6', '#818cf8', '#22d3ee'],
-  escuchando: ['#14b8a6', '#06b6d4', '#34d399', '#3b82f6', '#8b5cf6', '#22d3ee', '#10b981', '#6366f1'],
-  hablando: ['#d946ef', '#f472b6', '#fb923c', '#8b5cf6', '#14b8a6', '#c026d3', '#f59e0b', '#06b6d4'],
-  silenciado: ['#94a3b8', '#7c8aa5', '#a5b4c8', '#8b93ad', '#9ca3af', '#7f8ea8', '#a1a9bd', '#8a96b0'],
+// Tres tonos por estado: [principal, secundario, acento].
+const TEMAS = {
+  dia: {
+    mezcla: 'source-over',
+    nucleo: 0.18,
+    malla: 0.11,
+    paletas: {
+      inactivo: ['#4c1d95', '#6d28d9', '#0e7490'],
+      conectando: ['#3730a3', '#6366f1', '#0891b2'],
+      escuchando: ['#155e75', '#0891b2', '#4338ca'],
+      hablando: ['#86198f', '#c026d3', '#ea580c'],
+      silenciado: ['#64748b', '#94a3b8', '#475569'],
+    },
+  },
+  noche: {
+    mezcla: 'lighter',
+    nucleo: 0.45,
+    malla: 0.14,
+    paletas: {
+      inactivo: ['#a78bfa', '#c4b5fd', '#67e8f9'],
+      conectando: ['#818cf8', '#a5b4fc', '#67e8f9'],
+      escuchando: ['#67e8f9', '#5eead4', '#a5b4fc'],
+      hablando: ['#f0abfc', '#f9a8d4', '#fdba74'],
+      silenciado: ['#64748b', '#94a3b8', '#475569'],
+    },
+  },
 };
-// Modo noche: tonos más claros que se suman entre sí y brillan sobre fondo oscuro.
-const PALETAS_NOCHE = {
-  inactivo: ['#5eead4', '#7dd3fc', '#86efac', '#a78bfa', '#f0abfc', '#f9a8d4', '#818cf8', '#fdba74'],
-  conectando: ['#818cf8', '#7dd3fc', '#a78bfa', '#93c5fd', '#c4b5fd', '#5eead4', '#a5b4fc', '#67e8f9'],
-  escuchando: ['#5eead4', '#7dd3fc', '#86efac', '#93c5fd', '#a78bfa', '#67e8f9', '#6ee7b7', '#818cf8'],
-  hablando: ['#f0abfc', '#f9a8d4', '#fdba74', '#c4b5fd', '#5eead4', '#e879f9', '#fcd34d', '#7dd3fc'],
-  silenciado: ['#64748b', '#566179', '#6b7690', '#5b6480', '#6b7280', '#55617a', '#6f7891', '#5d6984'],
-};
-// Colores vivos de los puntos que salpican los hilos.
-const PUNTOS_DIA = ['#ef4444', '#facc15', '#3b82f6', '#22c55e', '#d946ef', '#06b6d4', '#1e1b4b', '#f97316'];
-const PUNTOS_NOCHE = ['#f87171', '#fde047', '#60a5fa', '#4ade80', '#f0abfc', '#22d3ee', '#ffffff', '#fb923c'];
 
 const hexARgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
-const aRgb = (paletas) => Object.fromEntries(Object.entries(paletas).map(([k, v]) => [k, v.map(hexARgb)]));
-const TEMAS = {
-  dia: { paletas: aRgb(PALETAS_DIA), puntos: PUNTOS_DIA, mezcla: 'source-over', alfa: 0.55 },
-  noche: { paletas: aRgb(PALETAS_NOCHE), puntos: PUNTOS_NOCHE, mezcla: 'lighter', alfa: 0.3 },
-};
-const GRUPOS = PALETAS_DIA.inactivo.length;
+for (const tema of Object.values(TEMAS)) {
+  for (const estado of Object.keys(tema.paletas)) tema.paletas[estado] = tema.paletas[estado].map(hexARgb);
+}
 const temaActual = () => (document.documentElement.dataset.tema === 'noche' ? TEMAS.noche : TEMAS.dia);
+const rgba = ([r, g, b], a) => `rgba(${r | 0}, ${g | 0}, ${b | 0}, ${a})`;
 
-// Ondas del campo de flujo: [kx, ky, velocidad, amplitud]. Distintas direcciones
-// y escalas para que el ovillo tenga volumen, se enrede y lance arcos largos.
-const ONDAS = [
-  [1.7, 1.2, 0.13, 1],
-  [-1.3, 2.2, -0.11, 0.9],
-  [2.9, -1.8, 0.19, 0.7],
-  [-3.9, -3.2, 0.23, 0.55],
-  [5.6, 4.4, -0.29, 0.38],
-  [-7.2, 5.1, 0.33, 0.22],
+const CAPAS_PROFUNDIDAD = 6;
+
+// Anillos orbitales: inclinación (x, z), radio relativo, cantidad de puntos, velocidad.
+const ANILLOS = [
+  { ix: 1.15, iz: 0.35, radio: 1.28, puntos: 160, velocidad: 0.22 },
+  { ix: -0.55, iz: -0.9, radio: 1.46, puntos: 190, velocidad: -0.15 },
+  { ix: 0.25, iz: 1.35, radio: 1.64, puntos: 220, velocidad: 0.1 },
 ];
 
 export class Orbe {
@@ -54,9 +58,12 @@ export class Orbe {
     this.obtenerNivel = obtenerNivel;
     this.nivel = 0;
     this.energia = 0.1;
+    this.giro = 0;
+    this.anterior = 0;
+    this.pulsos = [];
+    this.proximoPulso = 0;
     this.colores = temaActual().paletas.inactivo.map((c) => [...c]);
     this.movimientoReducido = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    this.particulas = [];
 
     new ResizeObserver(() => this.ajustar()).observe(lienzo);
     this.ajustar();
@@ -75,147 +82,182 @@ export class Orbe {
     this.lienzo.width = Math.round(this.ancho * escala);
     this.lienzo.height = Math.round(this.alto * escala);
     this.ctx.setTransform(escala, 0, 0, escala, 0, 0);
-    // Menos fibras en pantallas chicas para que vaya fluido en el móvil.
-    const cantidad = Math.round(Math.min(1500, Math.max(500, this.ancho * this.alto * 0.0038)));
-    this.particulas = Array.from({ length: cantidad }, (_, i) => this.nacer({ indice: i }, true));
-  }
 
-  /** Coloca una fibra nueva en algún punto del cuerpo del organismo. */
-  nacer(p, precalentar = false) {
-    const a = Math.random() * Math.PI * 2;
-    const d = Math.pow(Math.random(), 1.1); // más densidad en el núcleo
-    p.x = this.ancho / 2 + Math.cos(a) * d * this.ancho * 0.3;
-    p.y = this.alto / 2 + Math.sin(a) * d * this.alto * 0.22;
-    p.estela = [p.x, p.y];
-    p.largo = 50 + Math.floor(Math.random() * 110); // puntos de estela
-    p.vida = 0;
-    p.duracion = 220 + Math.random() * 380;
-    p.grupo = p.indice % GRUPOS;
-    // Una de cada ocho es "exploradora": se aleja más y dibuja los arcos largos.
-    p.exploradora = p.indice % 8 === 0;
-    // Algunas fibras llevan puntos de colores a lo largo de su recorrido.
-    p.cuentas = p.indice % 13 === 0 ? (p.indice / 13) % PUNTOS_DIA.length | 0 : null;
-    if (precalentar) {
-      // Al arrancar, avanzamos un poco para no empezar con todo vacío.
-      const pasos = Math.floor(Math.random() * p.largo);
-      for (let i = 0; i < pasos; i++) this.mover(p, 0, 0.1, 1.4);
-      p.vida = Math.random() * p.duracion * 0.6;
+    // Puntos repartidos de forma pareja sobre la esfera (espiral de Fibonacci).
+    const cantidad = this.ancho < 500 ? 2200 : 4200;
+    this.esfera = new Float32Array(cantidad * 3);
+    const dorado = Math.PI * (3 - Math.sqrt(5));
+    for (let i = 0; i < cantidad; i++) {
+      const y = 1 - (2 * (i + 0.5)) / cantidad;
+      const r = Math.sqrt(1 - y * y);
+      // Un poco de desorden para que no se note la trama regular de puntos.
+      const a = i * dorado + (Math.random() - 0.5) * 0.35;
+      this.esfera.set([Math.cos(a) * r, y, Math.sin(a) * r], i * 3);
     }
-    return p;
-  }
-
-  /**
-   * Dirección del flujo en (x, y): el "rotor" de una suma de ondas. Gira y se
-   * enreda pero nunca converge en un punto, así las fibras forman un ovillo.
-   */
-  flujo(x, y, t, turbulencia) {
-    const escala = Math.min(this.ancho, this.alto);
-    const px = (x - this.ancho / 2) / escala;
-    const py = (y - this.alto / 2) / escala;
-    let dx = 0;
-    let dy = 0;
-    for (const [kx, ky, w, amp] of ONDAS) {
-      const c = Math.cos(kx * px + ky * py + w * t) * amp;
-      dx += kx * c;
-      dy += ky * c;
-    }
-    // Ondas finas que aparecen con la voz y agitan las fibras.
-    const c2 = Math.cos(9 * px - 7 * py + t * 2) * turbulencia * 0.28;
-    dx += 9 * c2;
-    dy -= 7 * c2;
-    return [dy, -dx];
-  }
-
-  mover(p, t, energia, velocidad) {
-    const [fx, fy] = this.flujo(p.x, p.y, t, energia);
-    const modulo = Math.hypot(fx, fy) || 1;
-    let vx = (fx / modulo) * velocidad;
-    let vy = (fy / modulo) * velocidad;
-
-    // Fuerza suave hacia el centro para mantener la forma; las exploradoras se escapan más.
-    const rx = this.ancho * (0.33 + energia * 0.05);
-    const ry = this.alto * (0.24 + energia * 0.05);
-    const dx = (p.x - this.ancho / 2) / rx;
-    const dy = (p.y - this.alto / 2) / ry;
-    const fuera = dx * dx + dy * dy;
-    const limite = p.exploradora ? 1.4 : 0.5;
-    if (fuera > limite) {
-      vx -= dx * (fuera - limite) * 0.7;
-      vy -= dy * (fuera - limite) * 0.7;
-    }
-    p.x += vx;
-    p.y += vy;
-    p.estela.push(p.x, p.y);
-    return fuera;
   }
 
   cuadro(segundos) {
     const { ctx, ancho, alto } = this;
-    if (!ancho || !alto || !this.particulas.length) return;
-    const t = this.movimientoReducido ? segundos * 0.3 : segundos;
+    if (!ancho || !alto || !this.esfera) return;
+    const lento = this.movimientoReducido ? 0.3 : 1;
+    const t = segundos * lento;
+    const dt = Math.min(0.05, segundos - this.anterior) * lento;
+    this.anterior = segundos;
 
-    const estado = this.obtenerEstado();
+    // Estado, colores (con transición suave) y energía de la voz.
     const tema = temaActual();
+    const estado = this.obtenerEstado();
     const destino = tema.paletas[estado] ?? tema.paletas.inactivo;
-    this.colores.forEach((c, i) => c.forEach((v, j) => (c[j] = v + (destino[i][j] - v) * 0.04)));
-
+    this.colores.forEach((c, i) => c.forEach((v, j) => (c[j] = v + (destino[i][j] - v) * 0.05)));
     const crudo = this.obtenerNivel();
-    this.nivel += (crudo - this.nivel) * (crudo > this.nivel ? 0.3 : 0.06);
+    this.nivel += (crudo - this.nivel) * (crudo > this.nivel ? 0.35 : 0.07);
     let objetivo = this.nivel;
-    if (estado === 'conectando') objetivo = 0.3 + 0.2 * Math.sin(t * 4);
-    if (estado === 'inactivo') objetivo = 0.1;
-    if (estado === 'silenciado') objetivo = 0.03;
+    if (estado === 'conectando') objetivo = 0.25 + 0.2 * Math.sin(t * 5);
+    if (estado === 'inactivo') objetivo = 0.06;
+    if (estado === 'silenciado') objetivo = 0.02;
     this.energia += (objetivo - this.energia) * 0.08;
     const e = this.energia;
-    const velocidad = (this.movimientoReducido ? 0.6 : 1.3) * (0.7 + e * 2.2);
 
-    // 1) Mover todas las fibras.
-    for (const p of this.particulas) {
-      p.vida++;
-      if (p.vida < p.duracion) {
-        const fuera = this.mover(p, t, e, velocidad);
-        if (p.estela.length > p.largo * 2) p.estela.splice(0, 2);
-        // Las que se alejan demasiado se recogen y renacen en el núcleo (evita que se amontonen en el borde).
-        if (fuera > (p.exploradora ? 3.5 : 1.5)) p.vida = p.duracion;
-      } else {
-        // Al morir, la estela se recoge desde la cola hasta desaparecer.
-        p.estela.splice(0, 4);
-        if (p.estela.length < 4) this.nacer(p);
-      }
-    }
+    this.giro += dt * (0.14 + e * 0.5);
+    const inclinacion = 0.38 + Math.sin(t * 0.17) * 0.08;
+    const [cy0, sy0] = [Math.cos(this.giro), Math.sin(this.giro)];
+    const [cx0, sx0] = [Math.cos(inclinacion), Math.sin(inclinacion)];
+
+    const cx = ancho / 2;
+    const cy = alto / 2;
+    const R = Math.min(ancho, alto) * 0.27 * (1 + e * 0.05);
+    const foco = R * 3.2;
+
+    // Rota (giro + inclinación) y proyecta en perspectiva un punto de la esfera unitaria.
+    const proyectar = (x, y, z, radio) => {
+      const x1 = x * cy0 - z * sy0;
+      const z1 = x * sy0 + z * cy0;
+      const y1 = y * cx0 - z1 * sx0;
+      const z2 = y * sx0 + z1 * cx0;
+      const p = foco / (foco - z2 * radio * R);
+      return [cx + x1 * radio * R * p, cy + y1 * radio * R * p, z2, p];
+    };
 
     ctx.clearRect(0, 0, ancho, alto);
-    ctx.globalCompositeOperation = tema.mezcla;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
 
-    // 2) Fibras, agrupadas por color (un solo trazo por grupo: mucho más rápido).
-    ctx.lineWidth = 0.7 + e * 0.4;
-    for (let g = 0; g < GRUPOS; g++) {
-      const [r, gr, b] = this.colores[g];
-      ctx.strokeStyle = `rgba(${r | 0}, ${gr | 0}, ${b | 0}, ${tema.alfa + e * 0.3})`;
+    // 1) Núcleo de luz detrás de todo.
+    // El brillo nunca pasa del borde del lienzo (si no, se ve un corte recto).
+    const radioNucleo = Math.min(R * (1.5 + e * 0.5), Math.min(ancho, alto) * 0.49);
+    const nucleo = ctx.createRadialGradient(cx, cy, 0, cx, cy, radioNucleo);
+    nucleo.addColorStop(0, rgba(this.colores[1], tema.nucleo + e * 0.25));
+    nucleo.addColorStop(0.45, rgba(this.colores[0], (tema.nucleo + e * 0.2) * 0.45));
+    nucleo.addColorStop(1, rgba(this.colores[0], 0));
+    ctx.fillStyle = nucleo;
+    ctx.fillRect(0, 0, ancho, alto);
+
+    ctx.globalCompositeOperation = tema.mezcla;
+
+    // 2) Pulsos de energía cuando el coach habla.
+    if (estado === 'hablando' && t > this.proximoPulso && e > 0.08) {
+      this.pulsos.push({ inicio: t });
+      this.proximoPulso = t + 0.55 - Math.min(0.3, e * 0.4);
+    }
+    this.pulsos = this.pulsos.filter((p) => t - p.inicio < 1.6);
+    for (const p of this.pulsos) {
+      const avance = (t - p.inicio) / 1.6;
+      ctx.strokeStyle = rgba(this.colores[2], (1 - avance) * 0.35);
+      ctx.lineWidth = 1.2 * (1 - avance) + 0.3;
       ctx.beginPath();
-      for (const p of this.particulas) {
-        if (p.grupo !== g || p.estela.length < 4) continue;
-        const s = p.estela;
-        ctx.moveTo(s[0], s[1]);
-        for (let i = 2; i < s.length; i += 2) ctx.lineTo(s[i], s[i + 1]);
-      }
+      ctx.arc(cx, cy, Math.min(R * (1.05 + avance * 0.9), Math.min(ancho, alto) * 0.48), 0, Math.PI * 2);
       ctx.stroke();
     }
 
-    // 3) Puntos de colores a lo largo de algunas fibras, como cuentas.
-    const tam = 1.3 + e * 1.2;
-    for (const p of this.particulas) {
-      if (p.cuentas === null || p.estela.length < 4) continue;
-      ctx.fillStyle = tema.puntos[p.cuentas];
-      const s = p.estela;
-      for (let i = s.length - 2; i >= 0; i -= 22) {
+    // 3) Anillos orbitales: la mitad trasera, antes que la esfera.
+    const puntosAnillos = [];
+    for (const [indice, anillo] of ANILLOS.entries()) {
+      const [ci, si] = [Math.cos(anillo.ix), Math.sin(anillo.ix)];
+      const [cz, sz] = [Math.cos(anillo.iz), Math.sin(anillo.iz)];
+      const radio = anillo.radio * (1 + e * 0.15);
+      for (let k = 0; k < anillo.puntos; k++) {
+        const a = (k / anillo.puntos) * Math.PI * 2 + t * anillo.velocidad;
+        // Círculo en el plano XZ, inclinado sobre X y luego sobre Z.
+        let x = Math.cos(a);
+        let y = 0;
+        let z = Math.sin(a);
+        [y, z] = [y * ci - z * si, y * si + z * ci];
+        [x, y] = [x * cz - y * sz, x * sz + y * cz];
+        const [px, py, pz, p] = proyectar(x, y, z, radio);
+        // Pequeñas "cuentas" más brillantes cada tantos puntos.
+        const cuenta = k % 14 === 0;
+        puntosAnillos.push([px, py, pz, p, indice, cuenta]);
+      }
+    }
+    const dibujarAnillos = (delante) => {
+      for (const [px, py, pz, p, indice, cuenta] of puntosAnillos) {
+        if (pz > 0 !== delante) continue;
+        const alfa = (delante ? 0.75 : 0.22) * (cuenta ? 1 : 0.55);
+        ctx.fillStyle = rgba(this.colores[indice === 1 ? 2 : 1], alfa);
+        const tam = (cuenta ? 2.2 : 0.9) * p * (1 + e * 0.6);
+        ctx.fillRect(px - tam / 2, py - tam / 2, tam, tam);
+      }
+    };
+    dibujarAnillos(false);
+
+    // 4) Malla holográfica (paralelos y meridianos), muy tenue.
+    ctx.lineWidth = 0.6;
+    ctx.strokeStyle = rgba(this.colores[0], tema.malla + e * 0.1);
+    ctx.beginPath();
+    for (let lat = -3; lat <= 3; lat++) {
+      const y = lat / 4;
+      const r = Math.sqrt(1 - y * y);
+      for (let k = 0; k <= 72; k++) {
+        const a = (k / 72) * Math.PI * 2;
+        const [px, py] = proyectar(Math.cos(a) * r, y, Math.sin(a) * r, 1.015);
+        k === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+      }
+    }
+    for (let lon = 0; lon < 12; lon++) {
+      const a = (lon / 12) * Math.PI;
+      for (let k = 0; k <= 48; k++) {
+        const b = (k / 48) * Math.PI * 2;
+        const [px, py] = proyectar(Math.cos(a) * Math.sin(b), Math.cos(b), Math.sin(a) * Math.sin(b), 1.015);
+        k === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+      }
+    }
+    ctx.stroke();
+
+    // 5) La esfera de partículas, agrupada por profundidad y color (pocos trazos, muy rápido).
+    const amplitud = 0.03 + e * 0.11;
+    const grupos = Array.from({ length: CAPAS_PROFUNDIDAD * 3 }, () => []);
+    const s = this.esfera;
+    for (let i = 0; i < s.length; i += 3) {
+      const x = s[i];
+      const y = s[i + 1];
+      const z = s[i + 2];
+      const onda =
+        (Math.sin(x * 3.1 + t * 0.9) + Math.sin(y * 4.3 - t * 1.1) + Math.sin(z * 5.2 + t * 0.7)) / 3 +
+        e * Math.sin(x * 9 + y * 7 - t * 6) * 0.8;
+      const [px, py, pz, p] = proyectar(x, y, z, 1 + onda * amplitud);
+      const capa = Math.min(CAPAS_PROFUNDIDAD - 1, ((pz + 1) / 2) * CAPAS_PROFUNDIDAD) | 0;
+      // Color por "latitud" ondulada: bandas suaves que recorren la esfera.
+      const banda = (y + Math.sin(x * 2 + t * 0.4) * 0.35 + 1.35) / 2.7;
+      const color = Math.min(2, Math.max(0, (banda * 3) | 0));
+      grupos[capa * 3 + color].push(px, py, p);
+    }
+    for (let capa = 0; capa < CAPAS_PROFUNDIDAD; capa++) {
+      const delante = capa / (CAPAS_PROFUNDIDAD - 1); // 0 = atrás, 1 = adelante
+      for (let color = 0; color < 3; color++) {
+        const g = grupos[capa * 3 + color];
+        if (!g.length) continue;
+        ctx.fillStyle = rgba(this.colores[color], 0.12 + delante * 0.78);
         ctx.beginPath();
-        ctx.arc(s[i], s[i + 1], tam * (0.4 + (0.6 * i) / s.length), 0, Math.PI * 2);
+        for (let k = 0; k < g.length; k += 3) {
+          const tam = (0.35 + delante * 0.95) * g[k + 2] * (1 + e * 0.5);
+          ctx.moveTo(g[k] + tam, g[k + 1]);
+          ctx.arc(g[k], g[k + 1], tam, 0, Math.PI * 2);
+        }
         ctx.fill();
       }
     }
+
+    // 6) Anillos: la mitad delantera, por encima de la esfera.
+    dibujarAnillos(true);
+
     ctx.globalCompositeOperation = 'source-over';
   }
 }

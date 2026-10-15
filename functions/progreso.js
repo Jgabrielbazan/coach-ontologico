@@ -7,8 +7,10 @@ export const PUNTUACION_MINIMA = 70;
 const MAX_SESIONES_GUARDADAS = 50;
 const MAX_EVALUACIONES_GUARDADAS = 100;
 
+export const COACHES = ['femenino', 'masculino'];
+
 export function progresoInicial() {
-  return { nivel: 1, programaCompleto: false, evaluaciones: [], sesiones: [] };
+  return { nivel: 1, programaCompleto: false, evaluaciones: [], sesiones: [], coach: 'femenino' };
 }
 
 export function normalizar(datos) {
@@ -60,6 +62,19 @@ export function aplicarEvaluacion(actual, { nivel, aprobado, puntuacion, feedbac
     mensaje = `Aprobado con ${puntos}. ¡Programa completo! Celebra el logro y haz un cierre del recorrido.`;
   }
   return { progreso, cambio: true, mensaje };
+}
+
+/** Cambia el perfil del coach (femenino o masculino). */
+export function aplicarCoach(actual, coach) {
+  const progreso = structuredClone(normalizar(actual));
+  if (!COACHES.includes(coach)) return { progreso, cambio: false, mensaje: `Coach desconocido: ${coach}` };
+  progreso.coach = coach;
+  return { progreso, cambio: true, mensaje: 'Coach actualizado.' };
+}
+
+/** Vuelve al Nivel 1 conservando la elección de coach. */
+export function aplicarReinicio(actual) {
+  return { progreso: { ...progresoInicial(), coach: normalizar(actual).coach }, cambio: true, mensaje: 'Programa reiniciado.' };
 }
 
 export function aplicarResumen(actual, resumen) {

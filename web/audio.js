@@ -29,27 +29,59 @@ function desdeBase64(texto) {
   return bytes.buffer;
 }
 
+/** Micrófonos disponibles (los nombres solo aparecen tras dar permiso). */
+export async function listarMicrofonos() {
+  const dispositivos = await navigator.mediaDevices?.enumerateDevices?.();
+  return (dispositivos ?? []).filter((d) => d.kind === 'audioinput');
+}
+
 /** Micrófono → bloques PCM 16 kHz en base64. */
 export class Microfono {
-  constructor(alBloque) {
+  /**
+   * @param {(base64: string) => void} alBloque
+   * @param {string} [idDispositivo] micrófono elegido; vacío = el predeterminado del sistema
+   */
+  constructor(alBloque, idDispositivo = '') {
     this.alBloque = alBloque;
+    this.idDispositivo = idDispositivo;
     this.silenciado = false;
+    this.bloquesEnviados = 0;
   }
 
   async iniciar() {
-    this.flujo = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 },
-    });
+    const audio = { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 };
+    try {
+      this.flujo = await navigator.mediaDevices.getUserMedia({
+        audio: this.idDispositivo ? { ...audio, deviceId: { exact: this.idDispositivo } } : audio,
+      });
+    } catch (err) {
+      // Si el micrófono guardado ya no existe (auriculares desconectados), usamos el predeterminado.
+      if (!this.idDispositivo || err.name !== 'OverconstrainedError') throw err;
+      this.flujo = await navigator.mediaDevices.getUserMedia({ audio });
+    }
     this.contexto = new AudioContext();
+    if (this.contexto.state === 'suspended') await this.contexto.resume();
     await this.contexto.audioWorklet.addModule('/mic-worklet.js');
     this.fuente = this.contexto.createMediaStreamSource(this.flujo);
     this.nodo = new AudioWorkletNode(this.contexto, 'captura-microfono');
     this.nodo.port.onmessage = (e) => {
-      if (!this.silenciado) this.alBloque(aBase64(e.data));
+      if (this.silenciado) return;
+      this.bloquesEnviados++;
+      this.alBloque(aBase64(e.data));
     };
     this.fuente.connect(this.nodo);
+    // Salida en silencio hacia los parlantes: garantiza que todos los navegadores
+    // mantengan el procesador activo, sin que se escuche nada.
+    const silencio = this.contexto.createGain();
+    silencio.gain.value = 0;
+    this.nodo.connect(silencio).connect(this.contexto.destination);
     [this.analizador, this.muestras] = crearAnalizador(this.contexto);
     this.fuente.connect(this.analizador);
+  }
+
+  /** Nombre del micrófono que se está usando, para mostrarlo en pantalla. */
+  get nombre() {
+    return this.flujo?.getAudioTracks()[0]?.label ?? '';
   }
 
   nivel() {
