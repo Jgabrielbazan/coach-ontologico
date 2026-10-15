@@ -833,6 +833,12 @@ button {
   cursor: pointer;
 }
 
+.version {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--texto-tenue);
+}
+
 .enlace:hover {
   color: var(--texto-suave);
 }

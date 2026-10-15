@@ -520,6 +520,13 @@ ui.reiniciar.addEventListener('click', async () => {
   }
 });
 
+$('version').textContent = `Versión ${__VERSION__} · publicada el ${new Intl.DateTimeFormat('es', {
+  day: 'numeric',
+  month: 'short',
+  hour: '2-digit',
+  minute: '2-digit',
+}).format(new Date(__PUBLICADO__))}`;
+
 // ---------- Modo día / noche ----------
 
 function cambiarTema() {
