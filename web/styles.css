@@ -1650,3 +1650,28 @@ button {
 .dias-semana li.futuro {
   opacity: 0.45;
 }
+
+/* ---------- Instalar la app ---------- */
+
+.boton-instalar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--violeta);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-color: var(--actual-borde);
+}
+
+.boton-instalar svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+@media (max-width: 600px) {
+  .barra .boton-instalar span {
+    display: none;
+  }
+}

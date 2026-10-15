@@ -122,7 +122,7 @@ Al terminar te muestra la dirección de la app: `https://TU-PROYECTO.web.app`.
 
 ## Instalarla en la PC y en el móvil
 
-- **PC (Chrome o Edge):** abre la dirección → icono de instalar en la barra de
+- **PC (Chrome o Edge):** botón **Instalar en esta PC** de la app, o el icono de instalar en la barra de
   direcciones → **Instalar**.
 - **Android (Chrome):** abre la dirección → menú ⋮ → **Instalar app** (o *Añadir a
   pantalla de inicio*).

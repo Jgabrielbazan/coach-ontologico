@@ -1294,6 +1294,36 @@ function cambiarTema() {
 
 for (const boton of document.querySelectorAll('.boton-tema')) boton.addEventListener('click', cambiarTema);
 
+// ---------- Instalar la app (acceso directo en el escritorio y ventana propia) ----------
+
+let pedidoInstalacion = null;
+const botonesInstalar = document.querySelectorAll('.boton-instalar');
+const mostrarInstalar = (visible) => botonesInstalar.forEach((boton) => (boton.hidden = !visible));
+
+// El navegador avisa cuando la app se puede instalar; guardamos el aviso para usarlo con nuestro botón.
+window.addEventListener('beforeinstallprompt', (evento) => {
+  evento.preventDefault();
+  pedidoInstalacion = evento;
+  mostrarInstalar(true);
+});
+
+window.addEventListener('appinstalled', () => {
+  pedidoInstalacion = null;
+  mostrarInstalar(false);
+  actualizarEstado('¡Listo! El Coach quedó instalado: lo encuentras en el escritorio y en el menú Inicio.');
+});
+
+for (const boton of botonesInstalar) {
+  boton.addEventListener('click', async () => {
+    if (!pedidoInstalacion) return;
+    pedidoInstalacion.prompt();
+    await pedidoInstalacion.userChoice.catch(() => null);
+    // Cada aviso sirve una sola vez; si lo cancelas, el navegador vuelve a ofrecerlo más adelante.
+    pedidoInstalacion = null;
+    mostrarInstalar(false);
+  });
+}
+
 // ---------- Cuenta y arranque ----------
 
 function mostrarPantalla(conectado) {
