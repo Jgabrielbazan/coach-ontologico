@@ -9,7 +9,9 @@ import {
   aplicarCoach,
   aplicarEvaluacion,
   aplicarReinicio,
+  aplicarReflexion,
   aplicarResumen,
+  aplicarTarea,
   limpiarSituacion,
   normalizar,
   progresoInicial,
@@ -121,6 +123,19 @@ export const guardarResumen = onCall(async (request) => {
 export const reiniciarProgreso = onCall(async (request) => {
   const uid = usuarioAutorizado(request);
   const { mensaje } = await actualizarProgreso(uid, aplicarReinicio);
+  return { mensaje };
+});
+
+export const asignarTarea = onCall(async (request) => {
+  const uid = usuarioAutorizado(request);
+  const { mensaje } = await actualizarProgreso(uid, (p) => aplicarTarea(p, request.data?.tarea));
+  return { mensaje };
+});
+
+export const registrarReflexion = onCall(async (request) => {
+  const uid = usuarioAutorizado(request);
+  const { id, reflexion } = request.data ?? {};
+  const { mensaje } = await actualizarProgreso(uid, (p) => aplicarReflexion(p, id, reflexion));
   return { mensaje };
 });
 

@@ -6,11 +6,12 @@ export const NIVEL_MAXIMO = 3;
 export const PUNTUACION_MINIMA = 70;
 const MAX_SESIONES_GUARDADAS = 50;
 const MAX_EVALUACIONES_GUARDADAS = 100;
+const MAX_TAREAS_GUARDADAS = 30;
 
 export const COACHES = ['femenino', 'masculino'];
 
 export function progresoInicial() {
-  return { nivel: 1, programaCompleto: false, evaluaciones: [], sesiones: [], coach: 'femenino' };
+  return { nivel: 1, programaCompleto: false, evaluaciones: [], sesiones: [], tareas: [], coach: 'femenino' };
 }
 
 export function normalizar(datos) {
@@ -75,6 +76,32 @@ export function aplicarCoach(actual, coach) {
 /** Vuelve al Nivel 1 conservando la elección de coach. */
 export function aplicarReinicio(actual) {
   return { progreso: { ...progresoInicial(), coach: normalizar(actual).coach }, cambio: true, mensaje: 'Programa reiniciado.' };
+}
+
+/** El coach deja una tarea concreta para practicar entre sesiones. */
+export function aplicarTarea(actual, texto) {
+  const progreso = structuredClone(normalizar(actual));
+  const tarea = String(texto ?? '').trim().slice(0, 600);
+  if (!tarea) return { progreso, cambio: false, mensaje: 'Tarea vacía: no se guardó.' };
+  progreso.tareas.push({
+    id: Date.now().toString(36),
+    texto: tarea,
+    fecha: new Date().toISOString(),
+    reflexion: '',
+  });
+  progreso.tareas = progreso.tareas.slice(-MAX_TAREAS_GUARDADAS);
+  return { progreso, cambio: true, mensaje: 'Tarea guardada: el usuario la verá en la app.' };
+}
+
+/** El usuario anota cómo le fue con una tarea. */
+export function aplicarReflexion(actual, id, texto) {
+  const progreso = structuredClone(normalizar(actual));
+  const tarea = progreso.tareas.find((t) => t.id === id);
+  const reflexion = String(texto ?? '').trim().slice(0, 2000);
+  if (!tarea || !reflexion) return { progreso, cambio: false, mensaje: 'No se encontró la tarea o el texto está vacío.' };
+  tarea.reflexion = reflexion;
+  tarea.fechaReflexion = new Date().toISOString();
+  return { progreso, cambio: true, mensaje: 'Reflexión guardada.' };
 }
 
 /** Limpia la situación que escribe el usuario para la práctica libre. */

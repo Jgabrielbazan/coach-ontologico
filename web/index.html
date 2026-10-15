@@ -106,6 +106,17 @@
           </label>
         </section>
 
+        <section class="tarjeta tarjeta-tarea" id="tarjeta-tarea" hidden>
+          <h3>Tu tarea <span id="fecha-tarea" class="tenue"></span></h3>
+          <p id="texto-tarea"></p>
+          <form id="formulario-reflexion" class="reflexion">
+            <label for="campo-reflexion">¿Cómo te fue?</label>
+            <textarea id="campo-reflexion" rows="2" maxlength="2000" placeholder="Anota qué hiciste, qué notaste y qué te costó…"></textarea>
+            <button type="submit" class="boton-fantasma">Guardar</button>
+          </form>
+          <p id="reflexion-guardada" class="reflexion-guardada" hidden></p>
+        </section>
+
         <h2 id="titulo-camino" class="titulo-panel">Tu camino</h2>
         <ol class="niveles" id="niveles">
           <li data-nivel="1">

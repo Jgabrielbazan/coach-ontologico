@@ -88,7 +88,7 @@ test('práctica libre: instrucciones y herramientas propias', async () => {
   assert.match(practica.systemInstruction, /práctica libre/);
   assert.match(practica.systemInstruction, /«Poner un límite a mi hermano»/);
   const nombres = practica.tools[0].functionDeclarations.map((f) => f.name);
-  assert.deepEqual(nombres, ['guardar_resumen_sesion']);
+  assert.deepEqual(nombres, ['asignar_tarea', 'guardar_resumen_sesion']);
   const programa = configuracionLive(progresoInicial());
   assert.ok(programa.tools[0].functionDeclarations.some((f) => f.name === 'registrar_evaluacion'));
 });
@@ -100,4 +100,18 @@ test('el coach incluye oficio y conocimiento ampliado en ambos modos', async () 
     assert.match(texto, /Juicios fundados: las 5 condiciones/);
     assert.match(texto, /no finjas ser humano/);
   }
+});
+
+test('tareas entre sesiones: asignar, reflexionar y retomar', async () => {
+  const { aplicarTarea, aplicarReflexion } = await import('./progreso.js');
+  const { instruccionesSistema } = await import('./coach.js');
+  let p = aplicarTarea(progresoInicial(), 'Anota tres juicios por día y sus hechos.').progreso;
+  assert.equal(p.tareas.length, 1);
+  assert.match(instruccionesSistema(p), /pregúntale brevemente cómo le fue/);
+  const id = p.tareas[0].id;
+  assert.equal(aplicarReflexion(p, 'otro', 'x').cambio, false);
+  p = aplicarReflexion(p, id, 'Me costó separar el hecho del juicio con mi jefe.').progreso;
+  assert.equal(p.tareas[0].reflexion, 'Me costó separar el hecho del juicio con mi jefe.');
+  assert.match(instruccionesSistema(p), /«Me costó separar/);
+  assert.equal(aplicarTarea(p, '   ').cambio, false);
 });

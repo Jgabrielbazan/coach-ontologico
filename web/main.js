@@ -13,6 +13,12 @@ const ui = {
   estado: $('estado'),
   video: $('vista-camara'),
   subtitulos: $('subtitulos'),
+  tarjetaTarea: $('tarjeta-tarea'),
+  textoTarea: $('texto-tarea'),
+  fechaTarea: $('fecha-tarea'),
+  formularioReflexion: $('formulario-reflexion'),
+  campoReflexion: $('campo-reflexion'),
+  reflexionGuardada: $('reflexion-guardada'),
   opcionesModo: document.querySelectorAll('.opcion-modo'),
   panelPractica: $('panel-practica'),
   campoSituacion: $('campo-situacion'),
@@ -50,13 +56,14 @@ const NIVELES = {
   2: 'El Diseñador de Realidades',
   3: 'El Maestro de la Coherencia Corporal',
 };
-const PROGRESO_INICIAL = { nivel: 1, programaCompleto: false, evaluaciones: [], sesiones: [], coach: 'femenino' };
+const PROGRESO_INICIAL = { nivel: 1, programaCompleto: false, evaluaciones: [], sesiones: [], tareas: [], coach: 'femenino' };
 
 const TEXTO_INICIO = {
   programa: '[Inicio de sesión: saluda en una frase y continúa el programa donde corresponde.]',
   practica: '[Inicio de práctica libre: saluda en una frase y empieza con tus preguntas de contexto sobre la situación.]',
 };
-const TEXTO_CIERRE = '[La sesión termina ahora: llama a guardar_resumen_sesion y despídete en una frase.]';
+const TEXTO_CIERRE =
+  '[La sesión termina ahora: llama a asignar_tarea, luego a guardar_resumen_sesion, y despídete en una frase.]';
 const MAX_REINTENTOS = 3;
 
 const reproductor = new Reproductor(() => actualizarEstado());
@@ -114,6 +121,17 @@ function mostrarProgreso(datos) {
   if (ultima) {
     ui.feedback.textContent = ultima.feedback;
     ui.puntajeFeedback.textContent = `${ultima.puntuacion}/100`;
+  }
+
+  const tarea = p.tareas.at(-1);
+  ui.tarjetaTarea.hidden = !tarea;
+  if (tarea) {
+    ui.textoTarea.textContent = tarea.texto;
+    ui.fechaTarea.textContent = fechaCorta.format(new Date(tarea.fecha));
+    ui.formularioReflexion.dataset.id = tarea.id;
+    ui.formularioReflexion.hidden = Boolean(tarea.reflexion);
+    ui.reflexionGuardada.hidden = !tarea.reflexion;
+    ui.reflexionGuardada.textContent = tarea.reflexion ? `✓ ${tarea.reflexion}` : '';
   }
 
   const sesion = p.sesiones.at(-1);
@@ -198,6 +216,23 @@ function agregarSubtitulo(quien, texto, { nuevaBurbuja = false } = {}) {
   ui.subtitulos.scrollTop = ui.subtitulos.scrollHeight;
 }
 
+// Anotar cómo te fue con la tarea: el coach lo lee al empezar la próxima sesión.
+ui.formularioReflexion.addEventListener('submit', async (evento) => {
+  evento.preventDefault();
+  const reflexion = ui.campoReflexion.value.trim();
+  if (!reflexion) return;
+  const boton = ui.formularioReflexion.querySelector('button');
+  boton.disabled = true;
+  try {
+    await llamar('registrarReflexion', { id: ui.formularioReflexion.dataset.id, reflexion });
+    ui.campoReflexion.value = '';
+  } catch (err) {
+    actualizarEstado(`No pude guardar tu reflexión: ${err.message}`);
+  } finally {
+    boton.disabled = false;
+  }
+});
+
 // Escribirle al coach: responde por voz igual que si le hablaras.
 ui.formularioMensaje.addEventListener('submit', (evento) => {
   evento.preventDefault();
@@ -229,6 +264,10 @@ async function ejecutarHerramienta({ name, args = {} }) {
     }
     case 'registrar_evaluacion': {
       const { mensaje } = await llamar('registrarEvaluacion', args);
+      return { resultado: mensaje };
+    }
+    case 'asignar_tarea': {
+      const { mensaje } = await llamar('asignarTarea', { tarea: args.tarea });
       return { resultado: mensaje };
     }
     case 'guardar_resumen_sesion': {
