@@ -147,6 +147,7 @@ Las apps instaladas se actualizan solas al volver a abrirlas.
 | `GEMINI_VOZ_FEMENINA` | `Kore` | Voz de Sofía, la coach (puedes oír las voces en AI Studio) |
 | `GEMINI_VOZ_MASCULINA` | `Charon` | Voz de Tomás, el coach |
 | `SILENCIO_MS` | `1000` | Silencio que espera antes de responder (pausas reflexivas) |
+| `DIALOGO_AFECTIVO` | `true` | Que el coach perciba el tono (risa, ironía, cansancio) y adapte su respuesta |
 
 Después de cambiarlas, vuelve a publicar con `npm run deploy`.
 

@@ -177,3 +177,9 @@ test('recordatorios: horario local, una vez por día y mensaje según la tarea',
   const conTarea = aplicarTarea(progresoInicial(), 'Anota tres juicios por día.').progreso;
   assert.match(mensajeRecordatorio(conTarea).titulo, /Sofía: ¿cómo vas con tu tarea\?/);
 });
+
+test('diálogo afectivo activado y pautas de humor e ironía', async () => {
+  const { configuracionLive, instruccionesSistema } = await import('./coach.js');
+  assert.equal(configuracionLive(progresoInicial()).enableAffectiveDialog, true);
+  assert.match(instruccionesSistema(progresoInicial()), /noto algo de ironía/);
+});

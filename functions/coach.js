@@ -226,6 +226,9 @@ export function configuracionLive(progreso, { modo = 'programa', situacion = '',
     },
     inputAudioTranscription: {},
     outputAudioTranscription: {},
+    // Diálogo afectivo: el modelo percibe el tono (risa, ironía, cansancio) y
+    // adapta su respuesta. Se puede apagar con DIALOGO_AFECTIVO=false.
+    ...(process.env.DIALOGO_AFECTIVO === 'false' ? {} : { enableAffectiveDialog: true }),
     realtimeInputConfig: {
       automaticActivityDetection: manual
         ? { disabled: true }

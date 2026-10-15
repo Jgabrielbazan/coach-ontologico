@@ -90,6 +90,8 @@ let activa = false;
 let conectando = false;
 let terminando = false;
 let reintentos = 0;
+let recibioMensaje = false; // si la conexión actual ya respondió algo
+let sinAfectivo = false; // red de seguridad: sesión sin diálogo afectivo si Gemini lo rechazara
 let bloqueoPantalla = null;
 let avisarResumenGuardado = null;
 let progresoActual = PROGRESO_INICIAL;
@@ -396,6 +398,7 @@ async function atenderLlamadas(llamadas) {
 
 function alMensaje(mensaje) {
   reintentos = 0;
+  recibioMensaje = true;
   const reanudacion = mensaje.sessionResumptionUpdate;
   if (reanudacion?.resumable && reanudacion.newHandle) manejadorReanudacion = reanudacion.newHandle;
 
@@ -436,12 +439,12 @@ async function conectar() {
   }
   const ai = new GoogleGenAI({ apiKey: token, httpOptions: { apiVersion: 'v1alpha' } });
   const mia = ++idConexion;
+  recibioMensaje = false;
+  const configuracion = { ...config, sessionResumption: manejadorReanudacion ? { handle: manejadorReanudacion } : {} };
+  if (sinAfectivo) delete configuracion.enableAffectiveDialog;
   const nueva = await ai.live.connect({
     model: modelo,
-    config: {
-      ...config,
-      sessionResumption: manejadorReanudacion ? { handle: manejadorReanudacion } : {},
-    },
+    config: configuracion,
     callbacks: {
       onmessage: (m) => mia === idConexion && alMensaje(m),
       onerror: (e) => mia === idConexion && console.error('Error de Gemini Live:', e),
@@ -481,12 +484,26 @@ async function reconectar() {
     return;
   }
   conectando = false;
+  // Sin reanudación es una sesión nueva: hay que volver a saludar.
+  if (!manejadorReanudacion) enviarInicio();
   actualizarEstado();
+}
+
+function enviarInicio() {
+  sesion?.sendClientContent({ turns: [{ role: 'user', parts: [{ text: TEXTO_INICIO[modo] }] }], turnComplete: true });
 }
 
 function alCerrar(evento) {
   sesion = null;
   if (!activa || terminando) return;
+  // Si Gemini cerró sin responder nada, puede ser que no acepte el diálogo
+  // afectivo con este modelo: reintentamos una vez sin esa función.
+  if (!recibioMensaje && !sinAfectivo) {
+    console.warn('Gemini cerró la conexión al iniciar; reintento sin diálogo afectivo.', evento?.reason);
+    sinAfectivo = true;
+    reconectar();
+    return;
+  }
   if (manejadorReanudacion && reintentos < MAX_REINTENTOS) {
     reintentos++;
     reconectar();
@@ -540,7 +557,7 @@ async function iniciar() {
   try {
     bloqueoPantalla = await navigator.wakeLock?.request('screen');
   } catch {}
-  sesion.sendClientContent({ turns: [{ role: 'user', parts: [{ text: TEXTO_INICIO[modo] }] }], turnComplete: true });
+  enviarInicio();
   iniciarDiagnostico();
   iniciarTemporizador();
   actualizarEstado();
