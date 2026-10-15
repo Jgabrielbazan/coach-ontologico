@@ -2053,3 +2053,98 @@ button {
     animation: none;
   }
 }
+
+/* ---------- Lecciones en "Tu camino" ---------- */
+
+.nivel-lecciones {
+  margin-top: 6px;
+  font-size: 0.78rem;
+  color: var(--texto-tenue);
+}
+
+.lista-lecciones {
+  list-style: none;
+  margin: 8px 0 6px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.lista-lecciones li {
+  position: relative;
+  padding-left: 20px;
+  font-size: 0.82rem;
+  color: var(--texto-suave);
+}
+
+.lista-lecciones li::before {
+  content: '○';
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--texto-tenue);
+}
+
+.lista-lecciones li.hecha {
+  color: var(--texto);
+}
+
+.lista-lecciones li.hecha::before {
+  content: '✓';
+  color: var(--exito);
+  font-weight: 700;
+}
+
+.lista-lecciones li.siguiente {
+  color: var(--violeta);
+  font-weight: 600;
+}
+
+.lista-lecciones li.siguiente::before {
+  content: '➜';
+  color: var(--violeta);
+}
+
+.requisitos {
+  margin: 4px 0 0 !important;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: var(--vidrio-fuerte);
+  font-size: 0.76rem !important;
+  color: var(--texto-suave);
+}
+
+/* ---------- Tu perfil ---------- */
+
+.lista-perfil {
+  margin: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.lista-perfil dt {
+  margin-top: 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--texto-tenue);
+}
+
+.lista-perfil dd {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.plegable .tenue {
+  font-size: 0.7rem;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.control-postura {
+  border-color: var(--actual-borde);
+  color: var(--violeta);
+}

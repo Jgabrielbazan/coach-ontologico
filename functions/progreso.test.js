@@ -1,15 +1,35 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { CRITERIOS, aplicarEvaluacion, aplicarResumen, normalizar, progresoInicial } from './progreso.js';
+import { leccionesDe } from './programa.js';
+
+/** Deja el nivel actual listo para evaluar: todas las lecciones y dos prácticas reales con reflexión. */
+const listo = (progreso) => {
+  const p = normalizar(progreso);
+  if (p.programaCompleto) return p;
+  const lecciones = leccionesDe(p.nivel)
+    .filter((l) => !p.lecciones.some((h) => h.id === l.id))
+    .map((l, i) => ({ nivel: p.nivel, id: l.id, dia: `2025-12-${String(i + 1).padStart(2, '0')}`, fecha: '2025-12-01T00:00:00.000Z', evidencia: 'Lo explicó y aplicó.' }));
+  const tareas = [1, 2].map((i) => ({ id: `t${p.nivel}-${i}`, texto: 'Práctica', nivel: p.nivel, fecha: '2025-12-01T00:00:00.000Z', reflexion: 'Hecha.' }));
+  return { ...p, lecciones: [...p.lecciones, ...lecciones], tareas: [...p.tareas, ...tareas] };
+};
+
+// Cada evaluación de prueba ocurre 13 horas después de la anterior (respeta la espera entre intentos).
+let reloj = Date.parse('2026-01-10T10:00:00Z');
+const siguienteHora = () => new Date((reloj += 13 * 3600000));
 
 // "aprobado" = el coach marca todos los criterios del nivel como cumplidos.
-const evaluar = (progreso, nivel, aprobado, puntuacion) =>
-  aplicarEvaluacion(progreso, {
-    nivel,
-    criterios: (CRITERIOS[nivel] ?? []).map((c) => ({ id: c.id, cumplido: aprobado, evidencia: 'ej.' })),
-    puntuacion,
-    feedback: 'x',
-  });
+const evaluar = (progreso, nivel, aprobado, puntuacion, ahora = siguienteHora()) =>
+  aplicarEvaluacion(
+    listo(progreso),
+    {
+      nivel,
+      criterios: (CRITERIOS[nivel] ?? []).map((c) => ({ id: c.id, cumplido: aprobado, evidencia: 'ej.' })),
+      puntuacion,
+      feedback: 'x',
+    },
+    ahora,
+  );
 
 test('sube de nivel solo con aprobado y puntuación suficiente', () => {
   let p = progresoInicial();
@@ -53,8 +73,9 @@ test('quien completó el programa de 3 niveles sigue con el nivel 4', () => {
 test('niveles 4 y 5: contenido, criterios y nombres', async () => {
   const { instruccionesSistema, NIVELES } = await import('./coach.js');
   const texto = instruccionesSistema({ ...progresoInicial(), nivel: 4 });
-  assert.match(texto, /NIVEL 4: El Arquitecto de Compromisos/);
-  assert.match(texto, /NIVEL 5: El Líder Conversacional/);
+  assert.match(texto, /Nivel actual en detalle: NIVEL 4, El Arquitecto de Compromisos/);
+  assert.match(texto, /Lección 4\.1: Anatomía del pedido \(➜ SIGUIENTE\)/);
+  assert.match(texto, /Nivel 5: El Líder Conversacional/);
   assert.match(texto, /Nivel actual: NIVEL 4 \(El Arquitecto de Compromisos\)/);
   assert.match(texto, /Nivel 4: pedido: .* \| respuesta: .* \| reclamo: /);
   assert.match(texto, /Nivel 5: escucha: .* \| animo: .* \| acuerdo: /);
@@ -154,7 +175,7 @@ test('práctica libre: instrucciones y herramientas propias', async () => {
   assert.match(practica.systemInstruction, /práctica libre/);
   assert.match(practica.systemInstruction, /«Poner un límite a mi hermano»/);
   const nombres = practica.tools[0].functionDeclarations.map((f) => f.name);
-  assert.deepEqual(nombres, ['asignar_tarea', 'dejar_frase', 'registrar_avance', 'guardar_resumen_sesion']);
+  assert.deepEqual(nombres, ['actualizar_perfil', 'registrar_reflexion', 'asignar_tarea', 'dejar_frase', 'registrar_avance', 'guardar_resumen_sesion']);
   const programa = configuracionLive(progresoInicial());
   assert.ok(programa.tools[0].functionDeclarations.some((f) => f.name === 'registrar_evaluacion'));
 });
@@ -173,7 +194,7 @@ test('tareas entre sesiones: asignar, reflexionar y retomar', async () => {
   const { instruccionesSistema } = await import('./coach.js');
   let p = aplicarTarea(progresoInicial(), 'Anota tres juicios por día y sus hechos.').progreso;
   assert.equal(p.tareas.length, 1);
-  assert.match(instruccionesSistema(p), /pregúntale brevemente cómo le fue/);
+  assert.match(instruccionesSistema(p), /Todavía no contó cómo le fue/);
   const id = p.tareas[0].id;
   assert.equal(aplicarReflexion(p, 'otro', 'x').cambio, false);
   p = aplicarReflexion(p, id, 'Me costó separar el hecho del juicio con mi jefe.').progreso;
@@ -197,18 +218,19 @@ test('uso del mes: suma, se reinicia al cambiar de mes y acota valores', async (
 });
 
 test('evaluación: un criterio sin cumplir impide aprobar aunque el puntaje alcance', () => {
-  const r = aplicarEvaluacion(progresoInicial(), {
+  const r = aplicarEvaluacion(listo(progresoInicial()), {
     nivel: 1,
-    criterios: [{ id: 'clasifica', cumplido: true, evidencia: '4 de 5 bien' }],
+    criterios: [{ id: 'clasifica', cumplido: true, evidencia: '7 de 8 bien' }],
     puntuacion: 95,
-    feedback: 'Bien, pero no justificó',
+    feedback: 'Bien, pero no fundó',
   });
   assert.equal(r.progreso.nivel, 1);
-  assert.match(r.mensaje, /faltan criterios: Justifica/);
+  assert.match(r.mensaje, /faltan criterios: Funda un juicio/);
+  assert.match(r.mensaje, /a partir de mañana/);
   const guardada = r.progreso.evaluaciones[0];
-  assert.equal(guardada.criterios.length, 2);
+  assert.equal(guardada.criterios.length, 3);
   assert.equal(guardada.criterios[1].cumplido, false);
-  assert.equal(guardada.criterios[0].evidencia, '4 de 5 bien');
+  assert.equal(guardada.criterios[0].evidencia, '7 de 8 bien');
 });
 
 test('mantener para hablar desactiva la detección automática', async () => {
@@ -310,4 +332,83 @@ test('avatar: solo los conocidos y se conserva al reiniciar', async () => {
   const p = aplicarAvatar(progresoInicial(), 'lobo').progreso;
   assert.equal(p.avatar, 'lobo');
   assert.equal(aplicarReinicio(p).progreso.avatar, 'lobo');
+});
+
+test('lecciones: en orden, con evidencia, una por día y la 1.1 exige perfil y propósito', async () => {
+  const { aplicarLeccion, aplicarPerfil, aplicarProposito, proximaLeccion } = await import('./progreso.js');
+  const hoy = new Date('2026-10-15T15:00:00Z');
+  let p = progresoInicial();
+  assert.equal(proximaLeccion(p).id, '1.1');
+  assert.match(aplicarLeccion(p, { leccion: '1.2', evidencia: 'Explicó OSAR muy bien.' }, hoy).mensaje, /corresponde ahora es la 1\.1/);
+  assert.match(aplicarLeccion(p, { leccion: '1.1', evidencia: 'Contó su miedo.' }, hoy).mensaje, /guarda su perfil/);
+  p = aplicarPerfil(p, { motivo: 'Miedo a hablar en público', fortalezas: 'Constancia', inventado: 'x' }).progreso;
+  assert.deepEqual(Object.keys(p.perfil).sort(), ['actualizado', 'fortalezas', 'motivo']);
+  p = aplicarProposito(p, 'Quiero hablar en reuniones sin bloquearme').progreso;
+  assert.equal(aplicarLeccion(p, { leccion: '1.1', evidencia: 'corta' }, hoy).cambio, false);
+  const hecha = aplicarLeccion(p, { leccion: '1.1', evidencia: 'Contó su miedo y declaró su propósito.', fecha: '2026-10-15' }, hoy);
+  assert.equal(hecha.cambio, true);
+  assert.match(hecha.mensaje, /se habilita mañana/);
+  p = hecha.progreso;
+  assert.equal(p.lecciones[0].dia, '2026-10-15');
+  // Mismo día: no avanza a la siguiente, profundiza.
+  const otra = aplicarLeccion(p, { leccion: '1.2', evidencia: 'Explicó OSAR con un caso propio.', fecha: '2026-10-15' }, hoy);
+  assert.equal(otra.cambio, false);
+  assert.match(otra.mensaje, /HOY YA COMPLETÓ SU LECCIÓN DEL DÍA/);
+  // Al día siguiente sí.
+  const manana = new Date('2026-10-16T15:00:00Z');
+  assert.equal(aplicarLeccion(p, { leccion: '1.2', evidencia: 'Explicó OSAR con un caso propio.', fecha: '2026-10-16' }, manana).cambio, true);
+});
+
+test('evaluación bloqueada hasta cumplir lecciones, prácticas reales y la espera tras un intento', async () => {
+  const { requisitosEvaluacion, aplicarTarea, aplicarReflexion } = await import('./progreso.js');
+  const ahora = new Date('2026-10-15T15:00:00Z');
+  const sinNada = aplicarEvaluacion(progresoInicial(), { nivel: 1, criterios: [], puntuacion: 100 }, ahora);
+  assert.equal(sinNada.cambio, false);
+  assert.match(sinNada.mensaje, /EVALUACIÓN NO DISPONIBLE: falta completar las lecciones del nivel \(0 de 6\); hacer prácticas en la vida real/);
+  // Lecciones hechas pero sin prácticas reales.
+  let p = { ...listo(progresoInicial()), tareas: [] };
+  assert.deepEqual(requisitosEvaluacion(p, ahora).faltantes, ['hacer prácticas en la vida real con su reflexión anotada (0 de 2)']);
+  p = aplicarTarea(p, 'Diario de juicios.').progreso;
+  p = aplicarReflexion(p, undefined, 'Lo hice tres días.').progreso; // sin id: la última pendiente
+  p = aplicarTarea(p, 'Fundar un juicio antes de reaccionar.').progreso;
+  p = aplicarReflexion(p, undefined, 'Me sirvió con mi jefe.').progreso;
+  assert.equal(requisitosEvaluacion(p, ahora).disponible, true);
+  // Un intento no aprobado obliga a esperar al día siguiente.
+  const criterios = CRITERIOS[1].map((c) => ({ id: c.id, cumplido: true, evidencia: 'ok' }));
+  const fallo = aplicarEvaluacion(p, { nivel: 1, criterios, puntuacion: 60 }, ahora);
+  assert.equal(fallo.progreso.nivel, 1);
+  const enseguida = aplicarEvaluacion(fallo.progreso, { nivel: 1, criterios, puntuacion: 95 }, new Date('2026-10-15T16:00:00Z'));
+  assert.equal(enseguida.cambio, false);
+  assert.match(enseguida.mensaje, /esperar al próximo día/);
+  assert.equal(aplicarEvaluacion(fallo.progreso, { nivel: 1, criterios, puntuacion: 95 }, new Date('2026-10-16T10:00:00Z')).progreso.nivel, 2);
+});
+
+test('el coach recibe la lección del día, el perfil y la psicología', async () => {
+  const { instruccionesSistema, instruccionesPractica } = await import('./coach.js');
+  const { aplicarPerfil } = await import('./progreso.js');
+  const p = aplicarPerfil(progresoInicial(), { motivo: 'Miedo a hablar en público', cuidado: 'Una burla en la escuela' }).progreso;
+  const texto = instruccionesSistema(p, '2026-10-15');
+  assert.match(texto, /LECCIÓN DEL DÍA: DISPONIBLE\. Corresponde la 1\.1 \(«Tu punto de partida»\)/);
+  assert.match(texto, /Motivo \(el dolor o la incomodidad principal\): Miedo a hablar en público/);
+  assert.match(texto, /Temas sensibles: tratar con cuidado: Una burla en la escuela/);
+  assert.match(texto, /Principios informados en trauma/);
+  assert.match(texto, /Centro de Asistencia al Suicida/);
+  assert.match(texto, /EVALUACIÓN DEL NIVEL: NO DISPONIBLE/);
+  const hoy = { ...p, lecciones: [{ nivel: 1, id: '1.1', dia: '2026-10-15', fecha: '2026-10-15T12:00:00Z', evidencia: 'Entrevista hecha.' }] };
+  assert.match(instruccionesSistema(hoy, '2026-10-15'), /LECCIÓN DEL DÍA: YA COMPLETADA HOY\. No enseñes la 1\.2/);
+  assert.match(instruccionesPractica(p, 'Hablar en una reunión'), /Miedo a hablar en público/);
+});
+
+test('el programa tiene lecciones completas en los 5 niveles', async () => {
+  const { PROGRAMA } = await import('./programa.js');
+  for (const [nivel, datos] of Object.entries(PROGRAMA)) {
+    assert.ok(datos.lecciones.length >= 5, `nivel ${nivel}`);
+    for (const l of datos.lecciones) {
+      for (const campo of ['id', 'titulo', 'objetivo', 'contenido', 'ejercicio', 'practica', 'dominio']) {
+        assert.ok(l[campo]?.length >= 3, `${l.id} sin ${campo}`);
+      }
+      assert.ok(l.id.startsWith(`${nivel}.`));
+    }
+    assert.ok(datos.evaluacion.length > 50);
+  }
 });

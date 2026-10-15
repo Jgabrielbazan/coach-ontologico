@@ -1,9 +1,29 @@
 // Reglas del programa, sin acceso a base de datos: reciben el progreso actual y
 // devuelven el nuevo. index.js las aplica dentro de transacciones de Firestore.
+// No dependen de Node: la app también las usa para mostrar el camino.
+import { leccionesDe } from './programa.js';
 
 export const NIVEL_MAXIMO = 5;
 // Puntuación mínima (0-100) para aprobar una evaluación de nivel.
-export const PUNTUACION_MINIMA = 70;
+export const PUNTUACION_MINIMA = 75;
+// Aprender lleva días: una lección nueva por día (el resto de la sesión se profundiza y practica).
+export const LECCIONES_POR_DIA = 1;
+// Prácticas en la vida real (tareas del nivel con la reflexión anotada) antes de la evaluación.
+export const PRACTICAS_MINIMAS = 2;
+// Tras una evaluación no aprobada, se reintenta otro día.
+export const HORAS_ENTRE_INTENTOS = 12;
+const MAX_LECCIONES_GUARDADAS = 200;
+// Campos del perfil psicológico que arma el coach.
+export const CAMPOS_PERFIL = {
+  motivo: 'Motivo (el dolor o la incomodidad principal)',
+  miedos: 'Miedos y situaciones que evita',
+  creencias: 'Creencias y juicios sobre sí',
+  fortalezas: 'Fortalezas y recursos',
+  patrones: 'Patrones que se repiten',
+  contexto: 'Contexto (trabajo, vínculos, momento de vida)',
+  estilo: 'Forma de ser (temperamento, cómo procesa)',
+  cuidado: 'Temas sensibles: tratar con cuidado',
+};
 const MAX_SESIONES_GUARDADAS = 50;
 const MAX_EVALUACIONES_GUARDADAS = 100;
 const MAX_TAREAS_GUARDADAS = 30;
@@ -22,18 +42,21 @@ export const AVATARES = ['gatita', 'coneja', 'leona', 'osito', 'lobo', 'tigre'];
 // y la puntuación llega al mínimo: lo decide el servidor, no el modelo.
 export const CRITERIOS = {
   1: [
-    { id: 'clasifica', texto: 'Clasifica bien al menos 4 de los 5 elementos como hecho o juicio' },
-    { id: 'justifica', texto: 'Justifica al menos una clasificación con su propio razonamiento' },
+    { id: 'clasifica', texto: 'Clasifica bien al menos 7 de los 8 elementos y detecta los juicios disfrazados de hechos' },
+    { id: 'funda', texto: 'Funda un juicio en voz alta con las 5 condiciones, sin ayuda' },
+    { id: 'aplica', texto: 'Aplica las distinciones a su propio juicio maestro y lo reformula de forma creíble' },
   ],
   2: [
-    { id: 'declaracion', texto: 'Elige una declaración pertinente para el caso' },
-    { id: 'formula', texto: 'La formula en primera persona, con claridad, como si estuviera en la situación' },
-    { id: 'impacto', texto: 'Explica qué posibilidad abre o cierra esa declaración' },
+    { id: 'limite', texto: 'Sostiene un "no" firme y amable ante la insistencia, sin justificarse de más' },
+    { id: 'declaracion', texto: 'Formula un perdón o un agradecimiento en primera persona, sin excusas' },
+    { id: 'compromiso', texto: 'Declara un compromiso ligado a su propósito y explica qué posibilidades abre' },
+    { id: 'conviccion', texto: 'Su voz y su cuerpo transmiten convicción al declarar' },
   ],
   3: [
     { id: 'coherencia', texto: 'Sostiene el rol con coherencia entre lo que dice, cómo lo dice y su cuerpo' },
-    { id: 'corrige', texto: 'Corrige al menos una incoherencia cuando se le señala' },
     { id: 'voz', texto: 'Usa pausas y un ritmo de voz que transmiten calma y seguridad' },
+    { id: 'regulacion', texto: 'Regula su emoción bajo presión y se recupera de un bloqueo' },
+    { id: 'corrige', texto: 'Corrige al menos una incoherencia cuando se le señala' },
   ],
   4: [
     { id: 'pedido', texto: 'Formula un pedido con acción concreta, condiciones de satisfacción y plazo' },
@@ -43,6 +66,7 @@ export const CRITERIOS = {
   5: [
     { id: 'escucha', texto: 'Indaga y verifica lo que el otro quiere decir antes de responder' },
     { id: 'animo', texto: 'Nombra el estado de ánimo del otro como una interpretación, sin descalificar' },
+    { id: 'calma', texto: 'Mantiene la calma y la escucha ante la dureza del otro' },
     { id: 'acuerdo', texto: 'Lleva la conversación a un acuerdo o próximo paso concreto, cuidando la relación' },
   ],
 };
@@ -58,9 +82,145 @@ export function progresoInicial() {
     evolucion: [],
     proposito: null,
     dias: [],
+    lecciones: [],
+    perfil: {},
     avatar: null,
     coach: 'femenino',
   };
+}
+
+// ---------- Lecciones y requisitos de la evaluación ----------
+
+/** Lecciones completadas del nivel indicado (por defecto, el actual). */
+export function leccionesHechas(actual, nivel) {
+  const p = normalizar(actual);
+  const n = nivel ?? p.nivel;
+  return p.lecciones.filter((l) => l.nivel === n);
+}
+
+/** La próxima lección pendiente del nivel actual (null si ya están todas). */
+export function proximaLeccion(actual) {
+  const p = normalizar(actual);
+  const hechas = new Set(leccionesHechas(p).map((l) => l.id));
+  return leccionesDe(p.nivel).find((l) => !hechas.has(l.id)) ?? null;
+}
+
+/** Fecha local "AAAA-MM-DD" que manda la app, validada; si no sirve, la fecha UTC. */
+function diaLocal(fecha, ahora) {
+  const dia = String(fecha ?? '');
+  const valido = FECHA_LOCAL.test(dia) && Math.abs(Date.parse(`${dia}T12:00:00Z`) - ahora.getTime()) <= 1.5 * DIA_MS;
+  return valido ? dia : ahora.toISOString().slice(0, 10);
+}
+
+/** ¿Ya completó hoy las lecciones nuevas permitidas por día? */
+export function leccionDelDiaHecha(actual, fecha, ahora = new Date(), porDia = LECCIONES_POR_DIA) {
+  const dia = diaLocal(fecha, ahora);
+  return normalizar(actual).lecciones.filter((l) => l.dia === dia).length >= porDia;
+}
+
+/** Prácticas en la vida real del nivel actual: tareas del nivel con la reflexión anotada. */
+export function practicasDelNivel(actual) {
+  const p = normalizar(actual);
+  return p.tareas.filter((t) => t.nivel === p.nivel && String(t.reflexion ?? '').trim()).length;
+}
+
+/**
+ * Qué falta para poder tomar la evaluación del nivel actual. La decide el
+ * servidor: todas las lecciones, las prácticas reales y, tras un intento no
+ * aprobado, esperar al día siguiente.
+ */
+export function requisitosEvaluacion(actual, ahora = new Date()) {
+  const p = normalizar(actual);
+  const total = leccionesDe(p.nivel).length;
+  const hechas = leccionesHechas(p).length;
+  const practicas = practicasDelNivel(p);
+  const ultimo = p.evaluaciones.filter((e) => e.nivel === p.nivel).at(-1);
+  const horasDesdeIntento = ultimo && !ultimo.aprobado ? (ahora - new Date(ultimo.fecha)) / 3600000 : Infinity;
+  const espera = Math.max(0, Math.ceil(HORAS_ENTRE_INTENTOS - horasDesdeIntento));
+  const faltantes = [];
+  if (hechas < total) faltantes.push(`completar las lecciones del nivel (${hechas} de ${total})`);
+  if (practicas < PRACTICAS_MINIMAS) {
+    faltantes.push(`hacer prácticas en la vida real con su reflexión anotada (${practicas} de ${PRACTICAS_MINIMAS})`);
+  }
+  if (espera > 0) faltantes.push(`esperar al próximo día para reintentar (faltan unas ${espera} h)`);
+  return {
+    lecciones: { hechas, total },
+    practicas: { hechas: practicas, minimo: PRACTICAS_MINIMAS },
+    espera,
+    faltantes,
+    disponible: !p.programaCompleto && faltantes.length === 0,
+  };
+}
+
+/**
+ * El coach da por completada una lección cuando vio la señal de dominio.
+ * Deben seguir el orden y respetar el máximo de lecciones nuevas por día.
+ */
+export function aplicarLeccion(actual, { leccion, evidencia, fecha } = {}, ahora = new Date(), porDia = LECCIONES_POR_DIA) {
+  const progreso = structuredClone(normalizar(actual));
+  const sinCambio = (mensaje) => ({ progreso, cambio: false, mensaje });
+  if (progreso.programaCompleto) return sinCambio('El programa ya está completo.');
+  const siguiente = proximaLeccion(progreso);
+  if (!siguiente) return sinCambio('Todas las lecciones del nivel están completas: trabajen los requisitos de la evaluación.');
+  if (String(leccion) !== siguiente.id) {
+    return sinCambio(`No se registró: la lección que corresponde ahora es la ${siguiente.id} («${siguiente.titulo}»). Se avanza en orden.`);
+  }
+  const prueba = String(evidencia ?? '').replace(/\s+/g, ' ').trim().slice(0, 500);
+  if (prueba.length < 10) return sinCambio('Falta la evidencia: describe qué dijo o hizo que muestra el dominio.');
+  if (siguiente.id === '1.1' && (!progreso.perfil?.motivo || !progreso.proposito?.texto)) {
+    return sinCambio('Antes de completar esta lección guarda su perfil (actualizar_perfil, con al menos el motivo) y su propósito (declarar_proposito).');
+  }
+  if (leccionDelDiaHecha(progreso, fecha, ahora, porDia)) {
+    return sinCambio(
+      'HOY YA COMPLETÓ SU LECCIÓN DEL DÍA. No avances a la siguiente: el aprendizaje necesita tiempo. ' +
+        'Usa el resto de la sesión para profundizar y practicar lo aprendido con situaciones de su vida, repasar distinciones anteriores ' +
+        'o preparar su práctica real. La próxima lección se habilita mañana; díselo con naturalidad.',
+    );
+  }
+  progreso.lecciones.push({
+    nivel: progreso.nivel,
+    id: siguiente.id,
+    dia: diaLocal(fecha, ahora),
+    fecha: ahora.toISOString(),
+    evidencia: prueba,
+  });
+  progreso.lecciones = progreso.lecciones.slice(-MAX_LECCIONES_GUARDADAS);
+  const despues = proximaLeccion(progreso);
+  const req = requisitosEvaluacion(progreso, ahora);
+  const continuar = despues
+    ? `La próxima («${despues.titulo}») se habilita mañana. Dedica lo que queda a practicar esta lección y deja una práctica real ligada a ella.`
+    : req.disponible
+      ? 'Completó todas las lecciones del nivel y cumple los requisitos: la evaluación está disponible (puede ser otro día, con tiempo).'
+      : `Completó todas las lecciones del nivel. Para la evaluación falta: ${req.faltantes.join('; ')}.`;
+  return {
+    progreso,
+    cambio: true,
+    mensaje: `Lección ${siguiente.id} («${siguiente.titulo}») completada. Reconócele en una frase lo que logró. ${continuar}`,
+  };
+}
+
+/** El coach completa o corrige el perfil psicológico (solo los campos que trae). */
+export function aplicarPerfil(actual, campos = {}) {
+  const progreso = structuredClone(normalizar(actual));
+  const perfil = { ...(progreso.perfil ?? {}) };
+  let cambios = 0;
+  for (const clave of Object.keys(CAMPOS_PERFIL)) {
+    const valor = String(campos?.[clave] ?? '').replace(/\s+/g, ' ').trim().slice(0, 500);
+    if (valor && valor !== perfil[clave]) {
+      perfil[clave] = valor;
+      cambios++;
+    }
+  }
+  if (!cambios) return { progreso, cambio: false, mensaje: 'Perfil sin cambios.' };
+  progreso.perfil = { ...perfil, actualizado: new Date().toISOString() };
+  return { progreso, cambio: true, mensaje: 'Perfil actualizado (el usuario lo ve en la app). Úsalo para personalizar todo lo que hagan.' };
+}
+
+/** El usuario borra su perfil psicológico. */
+export function aplicarBorrarPerfil(actual) {
+  const progreso = structuredClone(normalizar(actual));
+  progreso.perfil = {};
+  return { progreso, cambio: true, mensaje: 'Perfil borrado.' };
 }
 
 /** Citas del usuario que muestran cómo hablaba en un nivel (para el cierre y el certificado). */
@@ -86,7 +246,7 @@ export function normalizar(datos) {
  * mínima + que la evaluación sea del nivel actual.
  * Devuelve { progreso, mensaje, cambio }.
  */
-export function aplicarEvaluacion(actual, { nivel, criterios = [], puntuacion, feedback } = {}) {
+export function aplicarEvaluacion(actual, { nivel, criterios = [], puntuacion, feedback } = {}, ahora = new Date()) {
   const progreso = structuredClone(normalizar(actual));
   const puntos = Math.max(0, Math.min(100, Math.round(Number(puntuacion) || 0)));
   const nivelEvaluado = Number(nivel) || progreso.nivel;
@@ -99,6 +259,16 @@ export function aplicarEvaluacion(actual, { nivel, criterios = [], puntuacion, f
       progreso,
       cambio: false,
       mensaje: `No se registró: el usuario está en el NIVEL ${progreso.nivel}, no en el ${nivelEvaluado}. Evalúa solo el nivel actual.`,
+    };
+  }
+  const requisitos = requisitosEvaluacion(progreso, ahora);
+  if (!requisitos.disponible) {
+    return {
+      progreso,
+      cambio: false,
+      mensaje:
+        `EVALUACIÓN NO DISPONIBLE: falta ${requisitos.faltantes.join('; ')}. No se registró nada. ` +
+        'Explícale con claridad qué falta y por qué (aprender de verdad lleva días de práctica) y sigan trabajando en eso.',
     };
   }
 
@@ -118,7 +288,7 @@ export function aplicarEvaluacion(actual, { nivel, criterios = [], puntuacion, f
     criterios: detalle,
     puntuacion: puntos,
     feedback: String(feedback ?? '').slice(0, 2000),
-    fecha: new Date().toISOString(),
+    fecha: ahora.toISOString(),
   });
   progreso.evaluaciones = progreso.evaluaciones.slice(-MAX_EVALUACIONES_GUARDADAS);
 
@@ -128,7 +298,8 @@ export function aplicarEvaluacion(actual, { nivel, criterios = [], puntuacion, f
       : `puntuación ${puntos}, mínimo ${PUNTUACION_MINIMA}`;
     const mensaje =
       `No aprobado (${motivo}). Sigue en el NIVEL ${progreso.nivel}. ` +
-      'Explícale con cariño qué faltó, da un ejemplo concreto y propón practicar de nuevo.';
+      'Explícale con cariño y precisión qué faltó, da un ejemplo concreto, deja una práctica real enfocada en eso ' +
+      'y cuéntale que puede volver a intentarlo a partir de mañana.';
     return { progreso, cambio: true, mensaje };
   }
 
@@ -172,10 +343,14 @@ export function aplicarAvatar(actual, avatar) {
   return { progreso, cambio: true, mensaje: 'Avatar actualizado.' };
 }
 
-/** Vuelve al Nivel 1 conservando el coach, el avatar, el propósito y los días practicados. */
+/** Vuelve al Nivel 1 conservando el coach, el avatar, el propósito, el perfil y los días practicados. */
 export function aplicarReinicio(actual) {
-  const { coach, avatar, proposito, dias } = normalizar(actual);
-  return { progreso: { ...progresoInicial(), coach, avatar, proposito, dias }, cambio: true, mensaje: 'Programa reiniciado.' };
+  const { coach, avatar, proposito, perfil, dias } = normalizar(actual);
+  return {
+    progreso: { ...progresoInicial(), coach, avatar, proposito, perfil, dias },
+    cambio: true,
+    mensaje: 'Programa reiniciado.',
+  };
 }
 
 /** Mes en curso como "AAAA-MM" (hora UTC). */
@@ -206,6 +381,7 @@ export function aplicarTarea(actual, texto) {
   progreso.tareas.push({
     id: Date.now().toString(36),
     texto: tarea,
+    nivel: progreso.nivel,
     fecha: new Date().toISOString(),
     reflexion: '',
   });
@@ -301,10 +477,10 @@ export function combinar(primera, segunda) {
   };
 }
 
-/** El usuario anota cómo le fue con una tarea. */
+/** El usuario anota cómo le fue con una tarea (por escrito, o se lo cuenta al coach). Sin id: la última pendiente. */
 export function aplicarReflexion(actual, id, texto) {
   const progreso = structuredClone(normalizar(actual));
-  const tarea = progreso.tareas.find((t) => t.id === id);
+  const tarea = id ? progreso.tareas.find((t) => t.id === id) : progreso.tareas.findLast((t) => !t.reflexion);
   const reflexion = String(texto ?? '').trim().slice(0, 2000);
   if (!tarea || !reflexion) return { progreso, cambio: false, mensaje: 'No se encontró la tarea o el texto está vacío.' };
   tarea.reflexion = reflexion;

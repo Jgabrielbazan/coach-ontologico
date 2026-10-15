@@ -146,6 +146,7 @@
               <option value="manual">Mantener para hablar (lugares con ruido)</option>
             </select>
           </label>
+          <p id="estado-voz" class="nota">La voz expresiva (risa, tono) se comprueba al empezar una sesión.</p>
           <label class="campo-microfono">
             <span>Micrófono</span>
             <select id="selector-microfono">
@@ -168,6 +169,17 @@
             </div>
           </form>
         </section>
+
+        <details class="tarjeta plegable" id="tarjeta-perfil" hidden>
+          <summary>
+            <span class="plegable-titulo">Tu perfil</span>
+            <span class="tenue">lo que tu coach conoce de ti</span>
+          </summary>
+          <div class="plegable-cuerpo">
+            <dl class="lista-perfil" id="lista-perfil"></dl>
+            <button type="button" class="enlace" id="borrar-perfil">Borrar mi perfil</button>
+          </div>
+        </details>
 
         <section class="tarjeta tarjeta-semana" id="tarjeta-semana">
           <h3>Tu semana <span id="cuenta-semana" class="puntaje"></span></h3>
@@ -365,6 +377,10 @@
           <button type="button" id="boton-camara" class="control" aria-pressed="false">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z"/></svg>
             <span>Cámara</span>
+          </button>
+          <button type="button" id="boton-postura" class="control control-postura" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM9 8h6a2 2 0 0 1 2 2v5h-2v7h-2v-6h-2v6H9v-7H7v-5a2 2 0 0 1 2-2z"/></svg>
+            <span>Mirá mi postura</span>
           </button>
           <button type="button" id="boton-subtitulos" class="control" aria-pressed="false">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zM6 10h2v2H6v-2zm0 4h8v2H6v-2zm10 2h-2v-2h2v2zm2-4h-8v-2h8v2z"/></svg>

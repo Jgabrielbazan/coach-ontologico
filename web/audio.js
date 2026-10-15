@@ -174,6 +174,8 @@ export class Camara {
     });
     this.video.srcObject = this.flujo;
     await this.video.play();
+    // Una primera imagen enseguida, y después una por segundo.
+    setTimeout(() => this.capturar(), 300);
     this.intervalo = setInterval(() => this.capturar(), 1000);
   }
 

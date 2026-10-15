@@ -1,6 +1,17 @@
 import { GoogleGenAI } from '@google/genai';
 import { Camara, Microfono, Reproductor, listarMicrofonos } from './audio.js';
 import { AVATARES } from './avatares.js';
+// Las reglas y el programa son los mismos que usa el servidor.
+import { NIVELES, PROGRAMA } from '../functions/programa.js';
+import {
+  CAMPOS_PERFIL,
+  NIVEL_MAXIMO,
+  leccionDelDiaHecha,
+  leccionesHechas,
+  normalizar,
+  proximaLeccion,
+  requisitosEvaluacion,
+} from '../functions/progreso.js';
 import { dibujarCertificado } from './certificado.js';
 import { Orbe } from './orbe.js';
 import { alCambiarUsuario, entrarConGoogle, escucharProgreso, iniciarFirebase, llamar, salir } from './firebase.js';
@@ -108,18 +119,15 @@ const ui = {
   porcentajePrograma: $('porcentaje-programa'),
   tramosPrograma: $('tramos-programa'),
   detallePrograma: $('detalle-programa'),
+  tarjetaPerfil: $('tarjeta-perfil'),
+  listaPerfil: $('lista-perfil'),
+  borrarPerfil: $('borrar-perfil'),
+  mirarPostura: $('boton-postura'),
+  estadoVoz: $('estado-voz'),
 };
 
 const NOMBRES_COACH = { femenino: 'Sofía', masculino: 'Tomás' };
 
-const NIVELES = {
-  1: 'El Observador Inicial',
-  2: 'El Diseñador de Realidades',
-  3: 'El Maestro de la Coherencia Corporal',
-  4: 'El Arquitecto de Compromisos',
-  5: 'El Líder Conversacional',
-};
-const NIVEL_MAXIMO = 5;
 const PROGRESO_INICIAL = {
   nivel: 1,
   programaCompleto: false,
@@ -130,14 +138,16 @@ const PROGRESO_INICIAL = {
   evolucion: [],
   proposito: null,
   dias: [],
+  lecciones: [],
+  perfil: {},
   avatar: null,
   coach: 'femenino',
 };
 
 const TEXTO_INICIO = {
   programa:
-    '[Inicio de sesión: saluda en una frase; si en "Tu evolución" hay un avance concreto, reconócelo en una frase ' +
-    'comparando el antes con el ahora; y continúa el programa donde corresponde.]',
+    '[Inicio de sesión: sigue la estructura de la sesión. Saluda, pregúntame cómo llego hoy y retoma mi práctica real; ' +
+    'si hay un avance concreto, reconócelo; luego sigue según el estado (lección del día o profundización).]',
   practica: '[Inicio de práctica libre: saluda en una frase y empieza con tus preguntas de contexto sobre la situación.]',
 };
 const TEXTO_CIERRE =
@@ -213,7 +223,9 @@ function mostrarProgreso(datos) {
     const nivel = Number(item.dataset.nivel);
     item.className = p.programaCompleto || nivel < p.nivel ? 'hecho' : nivel === p.nivel ? 'actual' : '';
     item.toggleAttribute('aria-current', !p.programaCompleto && nivel === p.nivel);
+    mostrarLecciones(item, nivel, p);
   }
+  mostrarPerfil(p.perfil);
 
   const ultima = p.evaluaciones.at(-1);
   ui.tarjetaFeedback.hidden = !ultima;
@@ -388,11 +400,10 @@ for (let nivel = 1; nivel <= NIVEL_MAXIMO; nivel++) {
 
 function mostrarAvance(p) {
   const aprobados = p.programaCompleto ? NIVEL_MAXIMO : p.nivel - 1;
-  const intento = p.programaCompleto ? null : p.evaluaciones.findLast((e) => e.nivel === p.nivel);
-  const total = intento?.criterios?.length ?? 0;
-  const logrados = intento?.criterios?.filter((c) => c.cumplido).length ?? 0;
-  // Sin aprobar, el nivel actual nunca se ve completo.
-  const parcial = total ? Math.min(0.9, logrados / total) : 0;
+  const total = PROGRAMA[p.nivel]?.lecciones.length ?? 0;
+  const hechas = p.programaCompleto ? total : leccionesHechas(p).length;
+  // Las lecciones llevan el nivel hasta el 90 %: el resto es aprobar la evaluación.
+  const parcial = total ? Math.min(0.9, (hechas / total) * 0.9) : 0;
   const porcentaje = Math.round(((aprobados + parcial) / NIVEL_MAXIMO) * 100);
   ui.porcentajePrograma.textContent = `${porcentaje}%`;
   [...ui.tramosPrograma.children].forEach((tramo, i) => {
@@ -407,14 +418,88 @@ function mostrarAvance(p) {
     );
     tramo.firstChild.style.transform = `scaleX(${relleno})`;
   });
-  ui.detallePrograma.textContent = p.programaCompleto
-    ? `¡Completaste los ${NIVEL_MAXIMO} niveles!`
-    : total
-      ? `Nivel ${p.nivel}: ${logrados} de ${total} criterios logrados en tu último intento.`
-      : `Nivel ${p.nivel}: aún sin evaluación. ${
-          aprobados ? `Ya aprobaste ${aprobados} ${aprobados === 1 ? 'nivel' : 'niveles'}.` : '¡Vamos por el primero!'
-        }`;
+  ui.detallePrograma.textContent = p.programaCompleto ? `¡Completaste los ${NIVEL_MAXIMO} niveles!` : textoDelDia(p);
 }
+
+/** Qué toca hoy: la lección del día, profundizar o la evaluación. */
+function textoDelDia(p) {
+  const siguiente = proximaLeccion(p);
+  const total = PROGRAMA[p.nivel].lecciones.length;
+  const hechas = leccionesHechas(p).length;
+  if (siguiente) {
+    return leccionDelDiaHecha(p, hoyLocal())
+      ? `Lección de hoy completada ✓ · ${hechas} de ${total}. La próxima, «${siguiente.titulo}», se habilita mañana: hoy toca practicar.`
+      : `Lección ${hechas + 1} de ${total} disponible hoy: «${siguiente.titulo}».`;
+  }
+  const req = requisitosEvaluacion(p);
+  return req.disponible
+    ? 'Lecciones completas ✓ · Evaluación del nivel disponible: pídesela a tu coach cuando tengas tiempo.'
+    : `Lecciones completas ✓ · Para la evaluación falta: ${req.faltantes.join('; ')}.`;
+}
+
+/** En "Tu camino": las lecciones de cada nivel (con detalle en el actual) y los requisitos de la evaluación. */
+function mostrarLecciones(item, nivel, p) {
+  let caja = item.querySelector('.nivel-lecciones');
+  if (!caja) {
+    caja = document.createElement('div');
+    caja.className = 'nivel-lecciones';
+    item.querySelector('div').append(caja);
+  }
+  const lecciones = PROGRAMA[nivel].lecciones;
+  const actual = !p.programaCompleto && nivel === p.nivel;
+  if (!actual) {
+    const aprobado = p.programaCompleto || nivel < p.nivel;
+    caja.textContent = `${lecciones.length} lecciones${aprobado ? ' · aprobado' : ''}`;
+    caja.classList.remove('detalle');
+    return;
+  }
+  caja.classList.add('detalle');
+  const hechas = new Set(leccionesHechas(p).map((l) => l.id));
+  const siguiente = proximaLeccion(p);
+  const lista = document.createElement('ol');
+  lista.className = 'lista-lecciones';
+  for (const leccion of lecciones) {
+    const fila = document.createElement('li');
+    fila.className = hechas.has(leccion.id) ? 'hecha' : leccion.id === siguiente?.id ? 'siguiente' : '';
+    fila.textContent = `${leccion.id} ${leccion.titulo}`;
+    fila.title = leccion.objetivo;
+    lista.append(fila);
+  }
+  const req = requisitosEvaluacion(p);
+  const requisitos = document.createElement('p');
+  requisitos.className = 'requisitos';
+  requisitos.textContent = req.disponible
+    ? 'Evaluación disponible ✓'
+    : `Evaluación: lecciones ${req.lecciones.hechas}/${req.lecciones.total} · prácticas reales ${req.practicas.hechas}/${req.practicas.minimo}${
+        req.espera ? ' · reintento mañana' : ''
+      }`;
+  caja.replaceChildren(lista, requisitos);
+}
+
+// ---------- Tu perfil (lo que el coach fue conociendo) ----------
+
+function mostrarPerfil(perfil = {}) {
+  const campos = Object.entries(CAMPOS_PERFIL).filter(([clave]) => perfil[clave]);
+  ui.tarjetaPerfil.hidden = !campos.length;
+  ui.listaPerfil.replaceChildren(
+    ...campos.flatMap(([clave, titulo]) => {
+      const termino = document.createElement('dt');
+      termino.textContent = titulo;
+      const valor = document.createElement('dd');
+      valor.textContent = perfil[clave];
+      return [termino, valor];
+    }),
+  );
+}
+
+ui.borrarPerfil.addEventListener('click', async () => {
+  if (!confirm('¿Borrar tu perfil? Tu coach dejará de tener en cuenta lo que fue conociendo de ti.')) return;
+  try {
+    await llamar('borrarPerfil');
+  } catch (err) {
+    actualizarEstado(`No pude borrar el perfil: ${err.message}`);
+  }
+});
 
 // ---------- Tarjetas plegables (recuerdan si las dejaste abiertas) ----------
 
@@ -817,13 +902,31 @@ ui.formularioMensaje.addEventListener('submit', (evento) => {
 async function ejecutarHerramienta({ name, args = {} }) {
   switch (name) {
     case 'consultar_progreso': {
-      const p = progresoActual;
+      const p = normalizar(progresoActual);
+      const siguiente = proximaLeccion(p);
+      const req = requisitosEvaluacion(p);
       return {
         nivel: p.nivel,
         nombreNivel: NIVELES[p.nivel],
         programaCompleto: p.programaCompleto,
+        leccionesCompletadas: leccionesHechas(p).map((l) => `${l.id} (${l.dia})`),
+        proximaLeccion: siguiente ? `${siguiente.id} ${siguiente.titulo}` : null,
+        leccionDelDia: leccionDelDiaHecha(p, hoyLocal()) ? 'ya completada hoy: profundizar y practicar' : 'disponible',
+        evaluacion: req.disponible ? 'DISPONIBLE' : `NO DISPONIBLE: falta ${req.faltantes.join('; ')}`,
         ultimasEvaluaciones: p.evaluaciones.slice(-3),
       };
+    }
+    case 'completar_leccion': {
+      const { mensaje } = await llamar('completarLeccion', { leccion: args.leccion, evidencia: args.evidencia, fecha: hoyLocal() });
+      return { resultado: mensaje };
+    }
+    case 'actualizar_perfil': {
+      const { mensaje } = await llamar('actualizarPerfil', { perfil: args });
+      return { resultado: mensaje };
+    }
+    case 'registrar_reflexion': {
+      const { mensaje } = await llamar('registrarReflexion', { reflexion: args.reflexion, fecha: hoyLocal() });
+      return { resultado: mensaje };
     }
     case 'registrar_evaluacion': {
       const { mensaje } = await llamar('registrarEvaluacion', args);
@@ -882,6 +985,7 @@ async function atenderLlamadas(llamadas) {
 
 function alMensaje(mensaje) {
   reintentos = 0;
+  if (!recibioMensaje) mostrarVozExpresiva(!sinAfectivo);
   recibioMensaje = true;
   const reanudacion = mensaje.sessionResumptionUpdate;
   if (reanudacion?.resumable && reanudacion.newHandle) manejadorReanudacion = reanudacion.newHandle;
@@ -914,6 +1018,7 @@ async function conectar() {
     modo,
     situacion: situacionActiva,
     manual: sesionManual,
+    fecha: hoyLocal(),
   });
   if (limitesServidor) {
     limites = limitesServidor;
@@ -971,6 +1076,13 @@ async function reconectar() {
   // Sin reanudación es una sesión nueva: hay que volver a saludar.
   if (!manejadorReanudacion) enviarInicio();
   actualizarEstado();
+}
+
+/** En Ajustes: si la voz expresiva (risa, tono) quedó activa con el modelo de Gemini. */
+function mostrarVozExpresiva(activa) {
+  ui.estadoVoz.textContent = activa
+    ? 'Voz expresiva activa: el coach percibe tu tono y puede reírse.'
+    : 'La voz expresiva no está disponible con este modelo de Gemini: el coach entiende el tono por tus palabras.';
 }
 
 function enviarInicio() {
@@ -1352,9 +1464,11 @@ document.addEventListener('keyup', (e) => {
 });
 
 function apagarCamara() {
+  clearTimeout(apagarCamara.aviso);
   camara?.detener();
   camara = null;
   ui.video.hidden = true;
+  ui.mirarPostura.hidden = true;
   ui.camara.setAttribute('aria-pressed', 'false');
   ponerTexto(ui.camara, 'Cámara');
 }
@@ -1370,13 +1484,36 @@ ui.silencio.addEventListener('click', () => {
   actualizarEstado();
 });
 
-/** Le cuenta al coach que la cámara se prendió o apagó, sin interrumpir lo que está diciendo. */
+/** Al prender la cámara el coach mira y dice qué ve (así sabes que te ve); al apagarla, solo se le avisa. */
 function avisarCamara(activa) {
-  const texto = activa
-    ? '[La cámara está activada: ahora puedes verme. Úsala como señal, con tacto.]'
-    : '[La cámara se apagó: ya no puedes verme.]';
-  sesion?.sendClientContent({ turns: [{ role: 'user', parts: [{ text: texto }] }], turnComplete: false });
+  if (!activa) {
+    sesion?.sendClientContent({ turns: [{ role: 'user', parts: [{ text: '[La cámara se apagó: ya no puedes verme.]' }] }], turnComplete: false });
+    return;
+  }
+  // Esperamos a que lleguen las primeras imágenes antes de pedirle que mire.
+  apagarCamara.aviso = setTimeout(
+    () =>
+      pedirAlCoach(
+        '[Activé la cámara: ya puedes verme. Mírame y, en una o dos frases, dime qué ves concretamente de mi postura y mi expresión ' +
+          'y un ajuste si hace falta. Desde ahora usa lo que ves durante la sesión. Luego sigue con lo que estábamos.]',
+      ),
+    2500,
+  );
 }
+
+/** Le habla al coach por escrito en nombre del usuario (interrumpe si estaba hablando). */
+function pedirAlCoach(texto) {
+  if (!sesion) return;
+  reproductor.cortar();
+  sesion.sendClientContent({ turns: [{ role: 'user', parts: [{ text: texto }] }], turnComplete: true });
+}
+
+ui.mirarPostura.addEventListener('click', () =>
+  pedirAlCoach(
+    '[Mírame ahora por la cámara y dame una devolución concreta y honesta de mi postura, mirada, gestos y expresión: ' +
+      'qué ves exactamente y un ajuste para hacer ya. Después confirma si lo corregí.]',
+  ),
+);
 
 ui.camara.addEventListener('click', async () => {
   if (camara) {
@@ -1392,6 +1529,8 @@ ui.camara.addEventListener('click', async () => {
     await camara.iniciar();
     ui.camara.setAttribute('aria-pressed', 'true');
     ponerTexto(ui.camara, 'Apagar cámara');
+    ui.mirarPostura.hidden = false;
+    actualizarEstado('Cámara activa: ubícate para que se vea de la cintura para arriba.');
     avisarCamara(true);
   } catch (err) {
     apagarCamara();
@@ -1423,7 +1562,7 @@ for (const opcion of ui.opcionesCoach) {
 
 ui.reiniciar.addEventListener('click', async () => {
   if (activa) return;
-  if (!confirm('¿Borrar tu progreso y volver al Nivel 1? Se conservan tu propósito y tus días practicados.')) return;
+  if (!confirm('¿Borrar tu progreso y volver al Nivel 1? Se conservan tu propósito, tu perfil y tus días practicados.')) return;
   try {
     actualizarEstado((await llamar('reiniciarProgreso')).mensaje);
   } catch (err) {

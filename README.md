@@ -12,10 +12,21 @@ en la PC y en el móvil, cada una por su cuenta. Entras con tu cuenta de Google 
 
 ## Qué incluye
 
-- **Programa de 5 niveles** con evaluaciones por criterios explícitos (✓/✗ con evidencia):
-  1 Hechos vs. juicios · 2 Declaraciones · 3 Coherencia corporal · 4 Pedidos, ofertas y
-  promesas · 5 Escucha, estados de ánimo y conversaciones difíciles.
-  Sube de nivel solo si se cumplen todos los criterios y la puntuación mínima.
+- **Programa de 5 niveles y 26 lecciones que se recorren en semanas** (`functions/programa.js`):
+  1 El observador (hechos, juicios y juicios sobre uno mismo) · 2 Declaraciones (el "no",
+  el perdón, el compromiso) · 3 Coherencia corporal (cuerpo, voz, miedo y vergüenza) ·
+  4 Pedidos, ofertas y promesas · 5 Escucha y conversaciones difíciles.
+  - Una lección nueva por día como máximo; el resto de la sesión se profundiza y practica.
+  - La evaluación integradora de cada nivel se habilita recién con todas las lecciones y
+    2 prácticas en la vida real con su reflexión; tras un intento no aprobado, se reintenta
+    otro día. Lo controla el servidor, no el modelo.
+- **Perfil psicológico:** en la lección 1.1 el coach hace una entrevista inicial (motivo,
+  miedos, creencias, fortalezas, patrones, contexto) y la usa para personalizar todo. Se ve
+  en la app y se puede borrar. El coach trabaja con principios informados en trauma,
+  exposición gradual, autocompasión y reestructuración de juicios, con límites éticos y
+  derivación profesional cuando hace falta (`functions/psicologia.js`).
+- **Cámara que mira de verdad:** al activarla el coach dice qué ve; el botón «Mirá mi postura»
+  pide una devolución corporal en cualquier momento.
 - **Práctica libre:** ensayas una situación real y el coach hace de la otra persona
   (di "pausa" para pedir una indicación).
 - **Coach con oficio:** contrato de sesión, preguntas poderosas, distinciones de la

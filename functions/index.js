@@ -13,6 +13,9 @@ import {
   mensajeRecordatorio,
 } from './recordatorios.js';
 import {
+  aplicarBorrarPerfil,
+  aplicarLeccion,
+  aplicarPerfil,
   aplicarAvatar,
   aplicarAvance,
   aplicarCoach,
@@ -130,7 +133,12 @@ export const crearSesion = onCall({ secrets: [GEMINI_API_KEY] }, async (request)
   return {
     token: token.name,
     modelo: GEMINI_MODEL.value(),
-    config: configuracionLive(progreso, { modo, situacion, manual: request.data?.manual === true }),
+    config: configuracionLive(progreso, {
+      modo,
+      situacion,
+      manual: request.data?.manual === true,
+      fecha: request.data?.fecha,
+    }),
     limites: { sesionMin: LIMITE_SESION_MIN.value(), mensualMin: limiteMensual },
   };
 });
@@ -237,6 +245,25 @@ export const probarRecordatorio = onCall(async (request) => {
   const resultado = await enviarNotificacion(await clavesVapid(db), suscripcion, mensajeRecordatorio(await leerProgreso(uid)));
   if (resultado !== 'ok') throw new HttpsError('unavailable', 'No se pudo enviar la notificación de prueba.');
   return { mensaje: 'Notificación enviada.' };
+});
+
+export const completarLeccion = onCall(async (request) => {
+  const uid = usuarioAutorizado(request);
+  const { leccion, evidencia, fecha } = request.data ?? {};
+  const { mensaje } = await actualizarProgreso(uid, (p) => aplicarLeccion(p, { leccion, evidencia, fecha }));
+  return { mensaje };
+});
+
+export const actualizarPerfil = onCall(async (request) => {
+  const uid = usuarioAutorizado(request);
+  const { mensaje } = await actualizarProgreso(uid, (p) => aplicarPerfil(p, request.data?.perfil));
+  return { mensaje };
+});
+
+export const borrarPerfil = onCall(async (request) => {
+  const uid = usuarioAutorizado(request);
+  const { mensaje } = await actualizarProgreso(uid, aplicarBorrarPerfil);
+  return { mensaje };
 });
 
 export const elegirAvatar = onCall(async (request) => {
