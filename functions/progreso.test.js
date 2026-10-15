@@ -115,3 +115,17 @@ test('tareas entre sesiones: asignar, reflexionar y retomar', async () => {
   assert.match(instruccionesSistema(p), /«Me costó separar/);
   assert.equal(aplicarTarea(p, '   ').cambio, false);
 });
+
+test('uso del mes: suma, se reinicia al cambiar de mes y acota valores', async () => {
+  const { aplicarUso, minutosDelMes } = await import('./progreso.js');
+  const octubre = new Date('2026-10-15T12:00:00Z');
+  let p = aplicarUso(progresoInicial(), 600, octubre).progreso;
+  p = aplicarUso(p, 300, octubre).progreso;
+  assert.equal(minutosDelMes(p, octubre), 15);
+  assert.equal(p.uso.sesiones, 2);
+  assert.equal(minutosDelMes(p, new Date('2026-11-02T12:00:00Z')), 0);
+  p = aplicarUso(p, 120, new Date('2026-11-02T12:00:00Z')).progreso;
+  assert.deepEqual(p.uso, { mes: '2026-11', segundos: 120, sesiones: 1 });
+  assert.equal(aplicarUso(p, -50).cambio, false);
+  assert.equal(aplicarUso(progresoInicial(), 1e9, octubre).progreso.uso.segundos, 4 * 3600);
+});

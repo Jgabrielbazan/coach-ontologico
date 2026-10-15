@@ -2,7 +2,7 @@ import { initializeApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { setGlobalOptions } from 'firebase-functions';
 import { HttpsError, onCall } from 'firebase-functions/https';
-import { defineSecret, defineString } from 'firebase-functions/params';
+import { defineInt, defineSecret, defineString } from 'firebase-functions/params';
 import { GoogleGenAI } from '@google/genai';
 import { configuracionLive } from './coach.js';
 import {
@@ -12,7 +12,9 @@ import {
   aplicarReflexion,
   aplicarResumen,
   aplicarTarea,
+  aplicarUso,
   limpiarSituacion,
+  minutosDelMes,
   normalizar,
   progresoInicial,
 } from './progreso.js';
@@ -27,6 +29,9 @@ const GEMINI_API_KEY = defineSecret('GEMINI_API_KEY');
 // Único correo de Google autorizado a usar la app (el tuyo).
 const EMAIL_PERMITIDO = defineString('EMAIL_PERMITIDO');
 const GEMINI_MODEL = defineString('GEMINI_MODEL', { default: 'gemini-3.8-live' });
+// Topes de gasto: minutos de voz por mes y duración máxima de cada sesión.
+const LIMITE_MENSUAL_MIN = defineInt('LIMITE_MENSUAL_MIN', { default: 600 });
+const LIMITE_SESION_MIN = defineInt('LIMITE_SESION_MIN', { default: 30 });
 
 function usuarioAutorizado(request) {
   const token = request.auth?.token;
@@ -77,6 +82,14 @@ export const crearSesion = onCall({ secrets: [GEMINI_API_KEY] }, async (request)
   if (modo === 'practica' && situacion.length < 3) {
     throw new HttpsError('invalid-argument', 'Escribe qué situación quieres practicar.');
   }
+  const progreso = await leerProgreso(uid);
+  const limiteMensual = LIMITE_MENSUAL_MIN.value();
+  if (minutosDelMes(progreso) >= limiteMensual) {
+    throw new HttpsError(
+      'resource-exhausted',
+      `Llegaste al límite de ${limiteMensual} minutos de este mes. Se renueva el día 1 (o súbelo en LIMITE_MENSUAL_MIN).`,
+    );
+  }
   const clave = GEMINI_API_KEY.value().trim();
   if (!clave) {
     throw new HttpsError(
@@ -103,7 +116,8 @@ export const crearSesion = onCall({ secrets: [GEMINI_API_KEY] }, async (request)
   return {
     token: token.name,
     modelo: GEMINI_MODEL.value(),
-    config: configuracionLive(await leerProgreso(uid), { modo, situacion }),
+    config: configuracionLive(progreso, { modo, situacion }),
+    limites: { sesionMin: LIMITE_SESION_MIN.value(), mensualMin: limiteMensual },
   };
 });
 
@@ -123,6 +137,12 @@ export const guardarResumen = onCall(async (request) => {
 export const reiniciarProgreso = onCall(async (request) => {
   const uid = usuarioAutorizado(request);
   const { mensaje } = await actualizarProgreso(uid, aplicarReinicio);
+  return { mensaje };
+});
+
+export const registrarUso = onCall(async (request) => {
+  const uid = usuarioAutorizado(request);
+  const { mensaje } = await actualizarProgreso(uid, (p) => aplicarUso(p, request.data?.segundos));
   return { mensaje };
 });
 

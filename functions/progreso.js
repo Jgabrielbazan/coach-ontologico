@@ -78,6 +78,26 @@ export function aplicarReinicio(actual) {
   return { progreso: { ...progresoInicial(), coach: normalizar(actual).coach }, cambio: true, mensaje: 'Programa reiniciado.' };
 }
 
+/** Mes en curso como "AAAA-MM" (hora UTC). */
+export const mesDe = (fecha = new Date()) => fecha.toISOString().slice(0, 7);
+
+/** Minutos de voz usados en el mes en curso. */
+export function minutosDelMes(actual, ahora = new Date()) {
+  const uso = normalizar(actual).uso;
+  return uso?.mes === mesDe(ahora) ? Math.round(uso.segundos / 60) : 0;
+}
+
+/** Suma la duración de una sesión al uso del mes (se reinicia al cambiar de mes). */
+export function aplicarUso(actual, segundos, ahora = new Date()) {
+  const progreso = structuredClone(normalizar(actual));
+  const duracion = Math.max(0, Math.min(4 * 3600, Math.round(Number(segundos) || 0)));
+  if (!duracion) return { progreso, cambio: false, mensaje: 'Duración vacía.' };
+  const mes = mesDe(ahora);
+  const previo = progreso.uso?.mes === mes ? progreso.uso : { mes, segundos: 0, sesiones: 0 };
+  progreso.uso = { mes, segundos: previo.segundos + duracion, sesiones: previo.sesiones + 1 };
+  return { progreso, cambio: true, mensaje: 'Uso registrado.' };
+}
+
 /** El coach deja una tarea concreta para practicar entre sesiones. */
 export function aplicarTarea(actual, texto) {
   const progreso = structuredClone(normalizar(actual));

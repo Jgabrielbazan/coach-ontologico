@@ -13,6 +13,9 @@ const ui = {
   estado: $('estado'),
   video: $('vista-camara'),
   subtitulos: $('subtitulos'),
+  costoUso: $('costo-uso'),
+  barraUso: $('barra-uso'),
+  textoUso: $('texto-uso'),
   tarjetaTarea: $('tarjeta-tarea'),
   textoTarea: $('texto-tarea'),
   fechaTarea: $('fecha-tarea'),
@@ -81,6 +84,12 @@ let avisarResumenGuardado = null;
 let progresoActual = PROGRESO_INICIAL;
 let dejarDeEscuchar = null;
 let estadoVisual = 'inactivo';
+// Costo estimado de Gemini Live por minuto de sesión: tu voz (0,005 USD/min, todo
+// el tiempo) + la del coach (0,018 USD/min, ~40 % del tiempo) + margen de contexto.
+const COSTO_POR_MINUTO_USD = 0.02;
+let limites = { sesionMin: 30, mensualMin: leerNumero('limite-mensual', 600) };
+let inicioSesion = null; // marca de tiempo cuando la sesión quedó conectada
+let temporizador = null;
 let modo = 'programa'; // 'programa' o 'practica'
 let situacionActiva = ''; // la situación de la práctica en curso
 let diagnostico = null; // intervalo que vigila si tu voz llega al coach
@@ -134,6 +143,8 @@ function mostrarProgreso(datos) {
     ui.reflexionGuardada.textContent = tarea.reflexion ? `✓ ${tarea.reflexion}` : '';
   }
 
+  mostrarUso(p);
+
   const sesion = p.sesiones.at(-1);
   ui.tarjetaSesion.hidden = !sesion;
   if (sesion) {
@@ -141,6 +152,28 @@ function mostrarProgreso(datos) {
     ui.ultimaSesion.textContent = prefijo + sesion.resumen;
     ui.fechaSesion.textContent = fechaCorta.format(new Date(sesion.fecha));
   }
+}
+
+function leerNumero(clave, porDefecto) {
+  try {
+    return Number(localStorage.getItem(clave)) || porDefecto;
+  } catch {
+    return porDefecto;
+  }
+}
+
+const dinero = new Intl.NumberFormat('es', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 });
+
+/** Minutos del mes en curso y costo estimado, con barra hacia el límite mensual. */
+function mostrarUso(p) {
+  const mes = new Date().toISOString().slice(0, 7);
+  const segundos = p.uso?.mes === mes ? p.uso.segundos : 0;
+  const minutos = Math.round(segundos / 60);
+  const proporcion = Math.min(1, minutos / limites.mensualMin);
+  ui.costoUso.textContent = `≈ ${dinero.format(minutos * COSTO_POR_MINUTO_USD)}`;
+  ui.barraUso.style.transform = `scaleX(${proporcion})`;
+  ui.barraUso.parentElement.classList.toggle('cerca-del-limite', proporcion >= 0.8);
+  ui.textoUso.textContent = `${minutos} de ${limites.mensualMin} min · ${p.uso?.mes === mes ? p.uso.sesiones : 0} sesiones (costo estimado)`;
 }
 
 /** El encabezado muestra el nivel en el programa, o la situación en la práctica libre. */
@@ -330,7 +363,16 @@ function alMensaje(mensaje) {
 }
 
 async function conectar() {
-  const { token, modelo, config } = await llamar('crearSesion', { modo, situacion: situacionActiva });
+  const { token, modelo, config, limites: limitesServidor } = await llamar('crearSesion', {
+    modo,
+    situacion: situacionActiva,
+  });
+  if (limitesServidor) {
+    limites = limitesServidor;
+    try {
+      localStorage.setItem('limite-mensual', String(limites.mensualMin));
+    } catch {}
+  }
   const ai = new GoogleGenAI({ apiKey: token, httpOptions: { apiVersion: 'v1alpha' } });
   const mia = ++idConexion;
   const nueva = await ai.live.connect({
@@ -436,7 +478,35 @@ async function iniciar() {
   } catch {}
   sesion.sendClientContent({ turns: [{ role: 'user', parts: [{ text: TEXTO_INICIO[modo] }] }], turnComplete: true });
   iniciarDiagnostico();
+  iniciarTemporizador();
   actualizarEstado();
+}
+
+// ---------- Duración de la sesión y uso del mes ----------
+
+/** Avisa cuando faltan 2 minutos para el límite de la sesión y cierra al llegar. */
+function iniciarTemporizador() {
+  inicioSesion = Date.now();
+  clearInterval(temporizador);
+  let avisado = false;
+  temporizador = setInterval(() => {
+    const restante = limites.sesionMin * 60 - (Date.now() - inicioSesion) / 1000;
+    if (restante <= 120 && !avisado) {
+      avisado = true;
+      actualizarEstado('Quedan 2 minutos de sesión: vamos cerrando.');
+    }
+    if (restante <= 0 && !terminando) terminar();
+  }, 1000);
+}
+
+/** Guarda en la cuenta cuánto duró la sesión (para el medidor de uso). */
+function registrarDuracion() {
+  clearInterval(temporizador);
+  temporizador = null;
+  if (!inicioSesion) return;
+  const segundos = Math.round((Date.now() - inicioSesion) / 1000);
+  inicioSesion = null;
+  if (segundos >= 5) llamar('registrarUso', { segundos }).catch((err) => console.error(err));
 }
 
 // ---------- Micrófono: elección, medidor y diagnóstico ----------
@@ -555,6 +625,7 @@ function finalizar(mensaje) {
   microfono?.detener();
   microfono = null;
   detenerDiagnostico();
+  registrarDuracion();
   apagarCamara();
   reproductor.cortar();
   bloqueoPantalla?.release().catch(() => {});
