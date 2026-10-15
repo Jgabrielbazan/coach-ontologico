@@ -13,6 +13,7 @@ import {
   mensajeRecordatorio,
 } from './recordatorios.js';
 import {
+  aplicarTrato,
   aplicarBorrarPerfil,
   aplicarLeccion,
   aplicarPerfil,
@@ -263,6 +264,12 @@ export const actualizarPerfil = onCall(async (request) => {
 export const borrarPerfil = onCall(async (request) => {
   const uid = usuarioAutorizado(request);
   const { mensaje } = await actualizarProgreso(uid, aplicarBorrarPerfil);
+  return { mensaje };
+});
+
+export const elegirTrato = onCall(async (request) => {
+  const uid = usuarioAutorizado(request);
+  const { mensaje } = await actualizarProgreso(uid, (p) => aplicarTrato(p, request.data?.trato));
   return { mensaje };
 });
 

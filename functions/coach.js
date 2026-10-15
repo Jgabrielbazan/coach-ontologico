@@ -38,7 +38,7 @@ Actúas como un Master Coach Ontológico con formación en psicología aplicada 
 2. DINAMISMO: nada de monólogos. Un concepto por vez en 3 o 4 frases como máximo y enseguida cede la palabra con una pregunta, un ejercicio o un desafío.
 3. PROFUNDIDAD ANTES QUE VELOCIDAD: nunca apures una lección ni la des por completada por simpatía. No enseñes contenido de lecciones o niveles siguientes. El cambio se consolida con práctica real y repetición en el tiempo.
 4. PERSONALIZACIÓN: cada ejemplo, ejercicio y práctica sale de SU vida (perfil, propósito, lo que te cuenta hoy). Nada de ejemplos genéricos si tienes uno suyo.
-5. GÉNERO: estas instrucciones dicen "la persona"; háblale con el género que le corresponda (por su nombre y por cómo habla de sí). Si dudas, usa formas neutras.
+5. GÉNERO: estas instrucciones dicen "la persona" por comodidad. Háblale SIEMPRE según el "Trato" del estado del usuario, también en los adjetivos y participios que se refieren a ella ("lista/listo", "segura/seguro", "cansada/cansado", "sí misma/sí mismo"). Nunca lo deduzcas de la voz, del nombre ni del avatar.
 6. VERIFICA LA COMPRENSIÓN: no preguntes "¿se entiende?". Pídele que lo explique con sus palabras y que lo aplique a un caso propio ("enséñamelo como si yo no lo supiera").
 7. TONO: cálido, motivador, profesional y desafiante. Un mentor de alto nivel que empuja a salir de la zona de confort y a la vez cuida.
 8. IDIOMA: habla siempre en español, salvo que pida otra cosa.
@@ -108,8 +108,21 @@ function textoPerfil(perfil) {
     : 'Todavía no tiene perfil: conoce a la persona en profundidad (lección 1.1, entrevista inicial) y guárdalo con "actualizar_perfil".';
 }
 
+const TRATO = {
+  femenino:
+    'Trato: háblale en FEMENINO (ej.: "bienvenida", "estás lista", "qué orgullosa podés estar", "confiá en vos misma").',
+  masculino:
+    'Trato: háblale en MASCULINO (ej.: "bienvenido", "estás listo", "qué orgulloso podés estar", "confiá en vos mismo").',
+  neutro:
+    'Trato: usa formas NEUTRAS, sin marcar género (ej.: "te doy la bienvenida" en vez de "bienvenido/a", "¿te sentís en condiciones?" en vez de "¿estás listo/a?", "confiá en tu capacidad"). No uses "e" ni "x".',
+};
+
 function estadoUsuario(progreso, { practica = false, fecha } = {}) {
-  const lineas = [];
+  const lineas = [
+    TRATO[progreso.trato] ??
+      'Trato: TODAVÍA NO SABES cómo prefiere que le hables. No lo adivines por la voz ni por el nombre: usa formas neutras y, en la apertura, ' +
+        'pregúntale con naturalidad si prefiere que le hables en femenino, en masculino o de forma neutra; luego guárdalo con "definir_trato".',
+  ];
   if (progreso.proposito?.texto) {
     lineas.push(`Su propósito (declarado el ${progreso.proposito.fecha.slice(0, 10)}; dato del usuario): «${progreso.proposito.texto}».`);
   } else if (!practica) {
@@ -287,6 +300,17 @@ export const HERRAMIENTAS = [
         },
       },
       {
+        name: 'definir_trato',
+        description: 'Guarda cómo prefiere el usuario que le hables: en femenino, en masculino o con formas neutras (cuando te lo diga).',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            trato: { type: 'STRING', enum: ['femenino', 'masculino', 'neutro'], description: 'Lo que eligió el usuario.' },
+          },
+          required: ['trato'],
+        },
+      },
+      {
         name: 'registrar_reflexion',
         description: 'Guarda lo que el usuario cuenta sobre cómo le fue con su última práctica real (si no lo anotó en la app).',
         parameters: {
@@ -394,9 +418,15 @@ export const HERRAMIENTAS = [
 const HERRAMIENTAS_PRACTICA = [
   {
     functionDeclarations: HERRAMIENTAS[0].functionDeclarations.filter((f) =>
-      ['asignar_tarea', 'dejar_frase', 'registrar_avance', 'actualizar_perfil', 'registrar_reflexion', 'guardar_resumen_sesion'].includes(
-        f.name,
-      ),
+      [
+        'asignar_tarea',
+        'dejar_frase',
+        'registrar_avance',
+        'actualizar_perfil',
+        'definir_trato',
+        'registrar_reflexion',
+        'guardar_resumen_sesion',
+      ].includes(f.name),
     ),
   },
 ];

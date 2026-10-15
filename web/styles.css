@@ -2148,3 +2148,29 @@ button {
   border-color: var(--actual-borde);
   color: var(--violeta);
 }
+
+/* ---------- Cómo te habla tu coach ---------- */
+
+.opciones-trato {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.opcion-trato {
+  padding: 10px 6px;
+  border: 2px solid var(--borde);
+  border-radius: 14px;
+  background: var(--vidrio-fuerte);
+  color: inherit;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.opcion-trato[aria-checked='true'] {
+  border-color: var(--violeta);
+  color: var(--violeta);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--violeta) 25%, transparent);
+}

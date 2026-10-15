@@ -37,6 +37,8 @@ export const TIPOS_AVANCE = ['partida', 'avance'];
 export const COACHES = ['femenino', 'masculino'];
 // Avatares del usuario (los dibujos están en la app): femeninos y masculinos, tiernos y rudos.
 export const AVATARES = ['gatita', 'coneja', 'leona', 'osito', 'lobo', 'tigre'];
+// Cómo quiere cada persona que el coach le hable. Nunca se adivina por la voz ni por el nombre.
+export const TRATOS = ['femenino', 'masculino', 'neutro'];
 
 // Criterios explícitos de cada evaluación. Se aprueba solo si se cumplen todos
 // y la puntuación llega al mínimo: lo decide el servidor, no el modelo.
@@ -84,6 +86,7 @@ export function progresoInicial() {
     dias: [],
     lecciones: [],
     perfil: {},
+    trato: null,
     avatar: null,
     coach: 'femenino',
   };
@@ -343,11 +346,19 @@ export function aplicarAvatar(actual, avatar) {
   return { progreso, cambio: true, mensaje: 'Avatar actualizado.' };
 }
 
-/** Vuelve al Nivel 1 conservando el coach, el avatar, el propósito, el perfil y los días practicados. */
+/** Cómo quiere que el coach le hable: en femenino, en masculino o con formas neutras. */
+export function aplicarTrato(actual, trato) {
+  const progreso = structuredClone(normalizar(actual));
+  if (!TRATOS.includes(trato)) return { progreso, cambio: false, mensaje: `Trato desconocido: ${trato}` };
+  progreso.trato = trato;
+  return { progreso, cambio: true, mensaje: `Trato guardado (${trato}). Háblale así desde ahora.` };
+}
+
+/** Vuelve al Nivel 1 conservando el coach, el avatar, el trato, el propósito, el perfil y los días practicados. */
 export function aplicarReinicio(actual) {
-  const { coach, avatar, proposito, perfil, dias } = normalizar(actual);
+  const { coach, avatar, trato, proposito, perfil, dias } = normalizar(actual);
   return {
-    progreso: { ...progresoInicial(), coach, avatar, proposito, perfil, dias },
+    progreso: { ...progresoInicial(), coach, avatar, trato, proposito, perfil, dias },
     cambio: true,
     mensaje: 'Programa reiniciado.',
   };

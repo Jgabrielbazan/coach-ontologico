@@ -140,6 +140,15 @@
             <p id="nota-recordatorio" class="nota" hidden></p>
           </div>
           <label class="campo-microfono">
+            <span>Cómo te habla tu coach</span>
+            <select id="selector-trato">
+              <option value="">Que me lo pregunte</option>
+              <option value="femenino">En femenino</option>
+              <option value="masculino">En masculino</option>
+              <option value="neutro">Neutro (sin marcar género)</option>
+            </select>
+          </label>
+          <label class="campo-microfono">
             <span>Forma de hablar</span>
             <select id="selector-forma">
               <option value="auto">Manos libres (detecta cuándo hablas)</option>
@@ -411,7 +420,15 @@
         <h3>Masculinos</h3>
         <div class="opciones-avatar" data-genero="masculino"></div>
       </div>
-      <button type="button" id="cerrar-avatar" class="boton-fantasma cerrar-dialogo">Ahora no</button>
+      <div class="grupo-avatares">
+        <h3 id="titulo-trato">¿Cómo quieres que te hable tu coach?</h3>
+        <div class="opciones-trato" role="radiogroup" aria-labelledby="titulo-trato">
+          <button type="button" role="radio" aria-checked="false" class="opcion-trato" data-trato="femenino">En femenino</button>
+          <button type="button" role="radio" aria-checked="false" class="opcion-trato" data-trato="masculino">En masculino</button>
+          <button type="button" role="radio" aria-checked="false" class="opcion-trato" data-trato="neutro">Neutro</button>
+        </div>
+      </div>
+      <button type="button" id="cerrar-avatar" class="boton-fantasma cerrar-dialogo">Listo</button>
     </dialog>
 
     <div class="bienvenida" id="bienvenida" hidden>

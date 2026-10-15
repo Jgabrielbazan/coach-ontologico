@@ -175,7 +175,7 @@ test('práctica libre: instrucciones y herramientas propias', async () => {
   assert.match(practica.systemInstruction, /práctica libre/);
   assert.match(practica.systemInstruction, /«Poner un límite a mi hermano»/);
   const nombres = practica.tools[0].functionDeclarations.map((f) => f.name);
-  assert.deepEqual(nombres, ['actualizar_perfil', 'registrar_reflexion', 'asignar_tarea', 'dejar_frase', 'registrar_avance', 'guardar_resumen_sesion']);
+  assert.deepEqual(nombres, ['actualizar_perfil', 'definir_trato', 'registrar_reflexion', 'asignar_tarea', 'dejar_frase', 'registrar_avance', 'guardar_resumen_sesion']);
   const programa = configuracionLive(progresoInicial());
   assert.ok(programa.tools[0].functionDeclarations.some((f) => f.name === 'registrar_evaluacion'));
 });
@@ -411,4 +411,18 @@ test('el programa tiene lecciones completas en los 5 niveles', async () => {
     }
     assert.ok(datos.evaluacion.length > 50);
   }
+});
+
+test('trato: el coach no adivina el género, lo pregunta y lo respeta', async () => {
+  const { aplicarTrato, aplicarReinicio } = await import('./progreso.js');
+  const { instruccionesSistema, instruccionesPractica } = await import('./coach.js');
+  assert.equal(progresoInicial().trato, null);
+  assert.match(instruccionesSistema(progresoInicial()), /TODAVÍA NO SABES cómo prefiere que le hables/);
+  assert.match(instruccionesPractica(progresoInicial(), 'Pedir un aumento'), /definir_trato/);
+  assert.equal(aplicarTrato(progresoInicial(), 'otro').cambio, false);
+  const ella = aplicarTrato(progresoInicial(), 'femenino').progreso;
+  assert.match(instruccionesSistema(ella), /háblale en FEMENINO/);
+  assert.match(instruccionesSistema(aplicarTrato(progresoInicial(), 'masculino').progreso), /háblale en MASCULINO/);
+  assert.match(instruccionesSistema(aplicarTrato(progresoInicial(), 'neutro').progreso), /formas NEUTRAS/);
+  assert.equal(aplicarReinicio(ella).progreso.trato, 'femenino');
 });

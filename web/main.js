@@ -124,6 +124,8 @@ const ui = {
   borrarPerfil: $('borrar-perfil'),
   mirarPostura: $('boton-postura'),
   estadoVoz: $('estado-voz'),
+  opcionesTrato: document.querySelectorAll('.opcion-trato'),
+  selectorTrato: $('selector-trato'),
 };
 
 const NOMBRES_COACH = { femenino: 'Sofía', masculino: 'Tomás' };
@@ -140,6 +142,7 @@ const PROGRESO_INICIAL = {
   dias: [],
   lecciones: [],
   perfil: {},
+  trato: null,
   avatar: null,
   coach: 'femenino',
 };
@@ -192,6 +195,7 @@ let certificadoAbierto = null;
 let bienvenidaPendiente = false; // saludo del avatar al entrar, una vez por inicio de sesión
 let primerNombre = '';
 let diasEstaSemana = 0;
+let avatarNuevo = null; // avatar recién elegido: saluda cuando se cierra el selector
 
 new Orbe($('orbe-entrar'), { obtenerEstado: () => 'inactivo' });
 const orbeCoach = new Orbe($('orbe-coach'), {
@@ -266,6 +270,7 @@ function mostrarProgreso(datos) {
   );
 
   mostrarAvatar(p.avatar);
+  mostrarTrato(p.trato);
   mostrarAvance(p);
   mostrarProposito(p.proposito);
   mostrarSemana(p.dias);
@@ -337,17 +342,39 @@ function mostrarAvatar(id) {
   }
 }
 
+// ---------- Cómo te habla el coach (femenino, masculino o neutro) ----------
+
+function mostrarTrato(trato) {
+  for (const opcion of ui.opcionesTrato) opcion.setAttribute('aria-checked', String(opcion.dataset.trato === trato));
+  if (document.activeElement !== ui.selectorTrato) ui.selectorTrato.value = trato ?? '';
+}
+
+async function elegirTrato(trato) {
+  const anterior = progresoActual.trato;
+  mostrarTrato(trato);
+  try {
+    await llamar('elegirTrato', { trato });
+  } catch (err) {
+    mostrarTrato(anterior);
+    actualizarEstado(`No pude guardar cómo quieres que te hable: ${err.message}`);
+  }
+}
+
+for (const opcion of ui.opcionesTrato) opcion.addEventListener('click', () => elegirTrato(opcion.dataset.trato));
+ui.selectorTrato.addEventListener('change', () => {
+  if (ui.selectorTrato.value) elegirTrato(ui.selectorTrato.value);
+});
+
 function abrirSelectorAvatar() {
   if (!ui.dialogoAvatar.open) ui.dialogoAvatar.showModal();
 }
 
 async function elegirAvatar(id) {
   const anterior = progresoActual.avatar;
-  ui.dialogoAvatar.close();
   if (id === anterior) return;
-  // Se muestra al instante; si el servidor no lo guarda, se vuelve al anterior.
+  // Se muestra al instante; si el servidor no lo guarda, se vuelve al anterior. Saluda al cerrar el cuadro.
   mostrarAvatar(id);
-  saludar({ ...progresoActual, avatar: id }, { nuevo: true });
+  avatarNuevo = id;
   try {
     await llamar('elegirAvatar', { avatar: id });
   } catch (err) {
@@ -386,6 +413,10 @@ function cerrarBienvenida() {
 
 ui.botonAvatar.addEventListener('click', abrirSelectorAvatar);
 ui.cerrarAvatar.addEventListener('click', () => ui.dialogoAvatar.close());
+ui.dialogoAvatar.addEventListener('close', () => {
+  if (avatarNuevo) saludar({ ...progresoActual, avatar: avatarNuevo }, { nuevo: true });
+  avatarNuevo = null;
+});
 ui.dialogoAvatar.addEventListener('click', (e) => e.target === ui.dialogoAvatar && ui.dialogoAvatar.close());
 ui.bienvenida.addEventListener('click', cerrarBienvenida);
 
@@ -918,6 +949,10 @@ async function ejecutarHerramienta({ name, args = {} }) {
     }
     case 'completar_leccion': {
       const { mensaje } = await llamar('completarLeccion', { leccion: args.leccion, evidencia: args.evidencia, fecha: hoyLocal() });
+      return { resultado: mensaje };
+    }
+    case 'definir_trato': {
+      const { mensaje } = await llamar('elegirTrato', { trato: args.trato });
       return { resultado: mensaje };
     }
     case 'actualizar_perfil': {
