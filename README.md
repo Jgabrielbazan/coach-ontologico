@@ -49,7 +49,19 @@ Necesitas **Node.js 22 o superior** ([nodejs.org](https://nodejs.org)).
 5. **Configuración del proyecto → Tus apps → Web (`</>`)** → registra una app web
    (sin marcar Hosting). Solo hace falta que exista.
 
-### 2. Preparar el código
+### 2. Instalar y publicar con doble clic (Windows)
+
+Descarga el código (en GitHub: **Code → Download ZIP**, y descomprímelo) y haz doble
+clic en **`Instalar y publicar.cmd`**. Hace todo solo; tú únicamente:
+
+1. Inicias sesión con tu cuenta de Google cuando se abre el navegador.
+2. Escribes el correo con el que vas a entrar a la app.
+3. Pegas tu clave de Google AI Studio cuando la pide.
+
+Al terminar muestra la dirección de la app (`Hosting URL`). Para publicar cambios más
+adelante, vuelve a abrirlo: lo que ya está configurado no lo pregunta de nuevo.
+
+### Alternativa: paso a paso por consola
 
 ```bash
 git clone https://github.com/Jgabrielbazan/coach-ontologico.git
@@ -73,7 +85,7 @@ queda en ningún archivo):
 npx firebase functions:secrets:set GEMINI_API_KEY
 ```
 
-### 3. Publicar
+#### Publicar
 
 ```bash
 npm run deploy
