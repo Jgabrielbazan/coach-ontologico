@@ -92,3 +92,12 @@ test('práctica libre: instrucciones y herramientas propias', async () => {
   const programa = configuracionLive(progresoInicial());
   assert.ok(programa.tools[0].functionDeclarations.some((f) => f.name === 'registrar_evaluacion'));
 });
+
+test('el coach incluye oficio y conocimiento ampliado en ambos modos', async () => {
+  const { instruccionesSistema, instruccionesPractica } = await import('./coach.js');
+  for (const texto of [instruccionesSistema(progresoInicial()), instruccionesPractica(progresoInicial(), 'Pedir un aumento')]) {
+    assert.match(texto, /Tu oficio/);
+    assert.match(texto, /Juicios fundados: las 5 condiciones/);
+    assert.match(texto, /no finjas ser humano/);
+  }
+});
