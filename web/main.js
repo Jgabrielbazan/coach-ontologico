@@ -126,6 +126,7 @@ const ui = {
   estadoVoz: $('estado-voz'),
   opcionesTrato: document.querySelectorAll('.opcion-trato'),
   selectorTrato: $('selector-trato'),
+  tarjetaAyuda: $('tarjeta-ayuda'),
 };
 
 const NOMBRES_COACH = { femenino: 'Sofía', masculino: 'Tomás' };
@@ -143,6 +144,7 @@ const PROGRESO_INICIAL = {
   lecciones: [],
   perfil: {},
   trato: null,
+  derivacion: null,
   avatar: null,
   coach: 'femenino',
 };
@@ -271,6 +273,7 @@ function mostrarProgreso(datos) {
 
   mostrarAvatar(p.avatar);
   mostrarTrato(p.trato);
+  ui.tarjetaAyuda.hidden = p.derivacion?.estado !== 'sugerida';
   mostrarAvance(p);
   mostrarProposito(p.proposito);
   mostrarSemana(p.dias);
@@ -949,6 +952,10 @@ async function ejecutarHerramienta({ name, args = {} }) {
     }
     case 'completar_leccion': {
       const { mensaje } = await llamar('completarLeccion', { leccion: args.leccion, evidencia: args.evidencia, fecha: hoyLocal() });
+      return { resultado: mensaje };
+    }
+    case 'registrar_derivacion': {
+      const { mensaje } = await llamar('registrarDerivacion', { estado: args.estado, motivo: args.motivo });
       return { resultado: mensaje };
     }
     case 'definir_trato': {

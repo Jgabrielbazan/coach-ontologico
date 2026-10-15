@@ -56,11 +56,12 @@ Actúas como un Master Coach Ontológico con formación en psicología aplicada 
 - "completar_leccion": solo con la lección que corresponde (la siguiente) y cuando viste la señal de dominio; incluye la evidencia (qué dijo o hizo). El sistema limita las lecciones nuevas por día: respeta lo que te responda.
 - "actualizar_perfil": guarda y corrige su perfil psicológico cada vez que aprendas algo importante de la persona (motivo, miedos, creencias, fortalezas, patrones, contexto, estilo, temas a cuidar). Escribe con respeto y en pocas palabras: la persona lo ve en la app.
 - "registrar_reflexion": cuando te cuente cómo le fue con su práctica real y no lo haya anotado en la app.
+- "registrar_derivacion": siempre que apliques el protocolo de derivación clínica, y cuando confirme que ya tiene acompañamiento profesional.
 - "registrar_evaluacion": SOLO si el estado dice que la evaluación está DISPONIBLE y después de tomarla completa. Marca cada criterio del nivel (por su id) como cumplido o no con su evidencia, una puntuación de 0 a 100 (mínimo ${PUNTUACION_MINIMA}) y un feedback. Sé riguroso: un criterio se cumple solo con evidencia clara. El sistema decide si aprueba: comunícale lo que te responda.
 - "Tu evolución": cuando diga algo que muestre su forma de hablar u observar, guárdalo TEXTUAL con "registrar_avance": "partida" para un patrón todavía no trabajado (ej.: «mi jefe nunca escucha») y "avance" para un cambio real (ej.: «mi jefe no respondió dos correos; voy a pedirle 15 minutos»), con la distinción que aplicó. Una o dos citas por sesión como máximo.
 - Reconocimiento: al empezar y al cerrar, nombra UN progreso concreto comparando cómo hablaba antes y cómo habla ahora, con sus palabras. Verdadero y específico: si no hay un avance claro, no lo inventes ni uses elogios genéricos.
 - "Tu propósito": si todavía no lo declaró, ayúdale a declararlo (es parte de la lección 1.1): para qué hace este camino, en primera persona y con sus palabras; luego llama a "declarar_proposito". Si ya lo tiene, retómalo en los momentos clave: al presentar una lección importante, al evaluar y cuando dude o se desanime.
-- Cierre, cuando se despida o la app avise que la sesión termina: si notaste un avance, regístralo y nómbralo en una frase; luego "asignar_tarea" con UNA práctica en la vida real ligada a la lección (qué hacer, cuándo, cuántas veces y qué observar); luego "dejar_frase" con algo para llevarse y dísela en voz alta; luego "guardar_resumen_sesion" (2 a 4 frases: qué se trabajó, dónde le costó, qué retomar) y despídete en una frase.
+- Cierre, cuando se despida o la app avise que la sesión termina: valida el aprendizaje (pregúntale qué se lleva y nómbrale si fue un aprendizaje de acciones, de mirada o de forma de ser); si notaste un avance, regístralo y nómbralo en una frase; luego "asignar_tarea" con UNA práctica en la vida real ligada a la lección, acordada con la persona, no impuesta (qué hacer, cuándo, cuántas veces y qué observar); luego "dejar_frase" con algo para llevarse y dísela en voz alta; luego "guardar_resumen_sesion" (2 a 4 frases: qué se trabajó, dónde le costó, qué retomar) y despídete en una frase.
 - "Algo para llevarte": una sola frase corta (máximo 15 palabras), cálida, en segunda persona, ligada a algo concreto de la sesión, que funcione como recordatorio sin sonar a tarea. No repitas la última.
 - Si dudas del estado actual (lecciones, requisitos), llama a "consultar_progreso".
 
@@ -117,8 +118,23 @@ const TRATO = {
     'Trato: usa formas NEUTRAS, sin marcar género (ej.: "te doy la bienvenida" en vez de "bienvenido/a", "¿te sentís en condiciones?" en vez de "¿estás listo/a?", "confiá en tu capacidad"). No uses "e" ni "x".',
 };
 
+function textoDerivacion(derivacion) {
+  if (derivacion?.estado === 'sugerida') {
+    return (
+      `ATENCIÓN: el ${derivacion.fecha.slice(0, 10)} sugeriste acompañamiento profesional (${derivacion.motivo || 'señales de alerta'}). ` +
+      'Antes de seguir con el programa, pregunta con cuidado cómo está y si ya cuenta con ese acompañamiento. Si las señales de alerta siguen, ' +
+      'no continúes con el programa: acompaña, contén y recuerda las líneas de ayuda. Si ya tiene acompañamiento, regístralo con "registrar_derivacion".'
+    );
+  }
+  if (derivacion?.estado === 'con_acompanamiento') {
+    return 'Cuenta con acompañamiento profesional de salud mental: el coaching lo complementa, no lo reemplaza. Respeta lo que trabaje en ese espacio.';
+  }
+  return '';
+}
+
 function estadoUsuario(progreso, { practica = false, fecha } = {}) {
   const lineas = [
+    textoDerivacion(progreso.derivacion),
     TRATO[progreso.trato] ??
       'Trato: TODAVÍA NO SABES cómo prefiere que le hables. No lo adivines por la voz ni por el nombre: usa formas neutras y, en la apertura, ' +
         'pregúntale con naturalidad si prefiere que le hables en femenino, en masculino o de forma neutra; luego guárdalo con "definir_trato".',
@@ -208,7 +224,7 @@ function estadoUsuario(progreso, { practica = false, fecha } = {}) {
   } else {
     lineas.push('Es la primera sesión: preséntate en dos frases, cuéntale cómo es el camino (semanas de práctica, una lección por día) y empieza la lección 1.1.');
   }
-  return `## Estado del usuario\n${lineas.join('\n')}`;
+  return `## Estado del usuario\n${lineas.filter(Boolean).join('\n')}`;
 }
 
 const INSTRUCCIONES_PRACTICA = `
@@ -308,6 +324,19 @@ export const HERRAMIENTAS = [
             trato: { type: 'STRING', enum: ['femenino', 'masculino', 'neutro'], description: 'Lo que eligió el usuario.' },
           },
           required: ['trato'],
+        },
+      },
+      {
+        name: 'registrar_derivacion',
+        description:
+          'Protocolo de derivación clínica: "sugerida" cuando sugeriste acompañamiento profesional por señales de alerta; "con_acompanamiento" cuando la persona confirma que ya lo tiene.',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            estado: { type: 'STRING', enum: ['sugerida', 'con_acompanamiento'], description: 'Qué pasó.' },
+            motivo: { type: 'STRING', description: 'En pocas palabras y sin etiquetas clínicas, qué señal viste.' },
+          },
+          required: ['estado'],
         },
       },
       {
@@ -424,6 +453,7 @@ const HERRAMIENTAS_PRACTICA = [
         'registrar_avance',
         'actualizar_perfil',
         'definir_trato',
+        'registrar_derivacion',
         'registrar_reflexion',
         'guardar_resumen_sesion',
       ].includes(f.name),

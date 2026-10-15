@@ -2174,3 +2174,29 @@ button {
   color: var(--violeta);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--violeta) 25%, transparent);
 }
+
+/* ---------- Ayuda profesional (cuando el coach sugiere derivar) ---------- */
+
+.tarjeta-ayuda {
+  border-color: color-mix(in srgb, var(--peligro) 45%, transparent);
+  background: color-mix(in srgb, var(--peligro) 8%, var(--vidrio-fuerte));
+}
+
+.lineas-ayuda {
+  margin: 8px 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.86rem;
+}
+
+.lineas-ayuda a {
+  display: inline-block;
+  min-width: 118px;
+  margin-right: 6px;
+  font-weight: 700;
+  color: var(--peligro);
+  text-decoration: none;
+}

@@ -16,7 +16,7 @@ export const PROGRAMA = {
         titulo: 'Tu punto de partida',
         objetivo: 'Conocer a la persona en profundidad y acordar para qué hace este camino.',
         contenido:
-          'Entrevista inicial, sin enseñar teoría todavía. Explora con calma: qué le trae (el dolor o la incomodidad concreta: miedo a hablar en público, timidez, inseguridad, conflictos, vergüenza, no animarse a mostrar lo que sabe…), desde cuándo, en qué situaciones aparece y qué le cuesta hoy (en lo concreto), qué intentó antes, qué fortalezas tiene, cómo es su contexto (trabajo, vínculos), y cómo sería su vida si esto cambiara. Escucha la emoción detrás del relato.',
+          'Primero genera contexto en pocas frases: qué es este espacio (coaching, no terapia), cómo es el camino (semanas, una lección por día, prácticas en la vida real), que eres un coach de inteligencia artificial y que lo que conversan queda guardado solo en su cuenta. Pregunta cómo prefiere que le hables si todavía no lo sabes. Luego, entrevista inicial sin enseñar teoría todavía. Explora con calma: qué le trae (el dolor o la incomodidad concreta: miedo a hablar en público, timidez, inseguridad, conflictos, vergüenza, no animarse a mostrar lo que sabe…), desde cuándo, en qué situaciones aparece y qué le cuesta hoy (en lo concreto), qué intentó antes, qué fortalezas tiene, cómo es su contexto (trabajo, vínculos), y cómo sería su vida si esto cambiara. Escucha la emoción detrás del relato.',
         ejercicio:
           'Pídele que te cuente la última vez que vivió eso que le duele, con detalle: dónde estaba, qué pasó, qué sintió en el cuerpo, qué se dijo a sí. Luego: "si dentro de dos meses esto hubiera cambiado, ¿en qué lo notarías?".',
         practica:
@@ -29,20 +29,20 @@ export const PROGRAMA = {
         titulo: 'El observador que eres',
         objetivo: 'Comprender que los resultados dependen de las acciones, y las acciones del observador que somos.',
         contenido:
-          'No vemos el mundo como es, vemos según el observador que somos (lenguaje, emociones, cuerpo, historia). Modelo OSAR: Observador → Sistema → Acciones → Resultados. Aprendizaje de primer orden (cambiar acciones) y de segundo orden (cambiar el observador, que abre acciones que antes no se veían). Ceguera cognitiva: "no sé que no sé".',
+          'No vemos el mundo como es, vemos según el observador que somos (lenguaje, emociones, cuerpo, historia). Modelo OSAR: el Sistema (cultura, reglas, vínculos) condiciona al Observador, que genera Acciones, que producen Resultados. Tres órdenes de aprendizaje: primero (cambiar acciones), segundo (cambiar la mirada) y tercero u ontológico (transformar juicios maestros, emocionalidad, cuerpo e identidad). La acción genera ser: el cambio llega con prácticas, no solo entendiendo. Ceguera cognitiva: "no sé que no sé".',
         ejercicio:
           'Tomen un resultado de su vida que no le gusta (ligado a su motivo). Recorran hacia atrás: ¿qué acciones lo producen?, ¿qué ve y qué no ve el observador que actúa así?, ¿qué tendría que ver distinto para actuar distinto?',
         practica:
           'Una vez por día, registrar una situación en la que otra persona interpretó lo mismo de forma distinta, y preguntarse qué vio el otro que yo no vi.',
         dominio:
-          'Explica OSAR con sus palabras y lo aplica a su propio caso, distinguiendo aprendizaje de primer y de segundo orden.',
+          'Explica OSAR con sus palabras, lo aplica a su propio caso y reconoce qué orden de aprendizaje necesita su dificultad.',
       },
       {
         id: '1.3',
         titulo: 'Afirmaciones y juicios',
         objetivo: 'Distinguir con soltura hechos verificables de interpretaciones.',
         contenido:
-          'Afirmaciones: describen hechos, son verdaderas o falsas y se pueden verificar (un testigo estaría de acuerdo). Juicios: interpretaciones, válidos o inválidos, fundados o infundados; viven en quien juzga y dicen tanto de él como de lo juzgado. Trampas: juicios disfrazados de hechos ("es un irresponsable", "nunca me escucha"), palabras como "siempre", "nunca", "todos".',
+          'Fenómeno y explicación: los hechos verificables ("la reunión empezó a las 9:15") frente a la historia que les agregamos ("eso demuestra que no me respetan"). Afirmaciones: describen hechos, son verdaderas o falsas y se pueden verificar (un testigo estaría de acuerdo). Juicios: interpretaciones, válidos o inválidos, fundados o infundados; viven en quien juzga y dicen tanto de él como de lo juzgado. Trampas: juicios disfrazados de hechos ("es un irresponsable", "nunca me escucha"), palabras como "siempre", "nunca", "todos". La "gran historia": el relato que justifica el sufrimiento o la parálisis se desarticula separando hechos de explicaciones.',
         ejercicio:
           'Pídele que cuente una situación reciente que le molestó. Luego separen juntos, frase por frase, qué es hecho y qué es juicio. Después dale 8 frases mezcladas (algunas con trampa) para clasificar y justificar.',
         practica:
@@ -51,24 +51,24 @@ export const PROGRAMA = {
       },
       {
         id: '1.4',
-        titulo: 'Fundar juicios',
-        objetivo: 'Aprender a fundar o infundar un juicio con las 5 condiciones.',
+        titulo: 'Fundar juicios (PEDAF)',
+        objetivo: 'Aprender a fundar o infundar un juicio con el protocolo PEDAF.',
         contenido:
-          'Las 5 condiciones: para qué lo emito, en qué dominio, con qué estándares, qué afirmaciones lo sostienen y qué afirmaciones lo contradicen. Un juicio fundado abre acción; uno infundado suele cerrar posibilidades. En psicología cognitiva se habla de distorsiones (catastrofizar, leer la mente, todo o nada, etiquetar): fundar juicios es una forma de revisarlas.',
+          'PEDAF: Propósito (¿para qué emito este juicio, qué futuro quiero diseñar o proteger?), Estándar (¿con qué vara lo mido, es mía o heredada?), Dominio (¿en qué área de mi vida aplica? rompe el "siempre" y el "nunca"), Afirmaciones (¿qué hechos lo sostienen? contarlos) y juicio contrario (¿qué hechos muestran lo opuesto?). Sin hechos a favor, o con más en contra, el juicio es infundado y recupero la libertad de elegir. Las distorsiones del pensamiento (catastrofizar, leer la mente, todo o nada, etiquetar) se revisan así.',
         ejercicio:
-          'Elijan un juicio que tenga sobre otra persona importante en su vida y recórranlo con las 5 condiciones, en voz alta. Pregunta por las afirmaciones que lo contradicen: suelen olvidarse.',
+          'Elijan un juicio que tenga sobre otra persona importante en su vida y recórranlo con PEDAF, en voz alta y en orden. Insiste en el juicio contrario: los hechos que lo contradicen suelen olvidarse.',
         practica:
-          'Antes de reaccionar ante alguien en los próximos días, pasar el juicio por las 5 condiciones (aunque sea mentalmente) y anotar qué cambió.',
-        dominio: 'Recorre las 5 condiciones sola, sin que le recuerdes cuáles son, y llega a una conclusión distinta de la inicial.',
+          'Antes de reaccionar ante alguien en los próximos días, pasar el juicio por PEDAF (aunque sea mentalmente) y anotar qué cambió.',
+        dominio: 'Recorre PEDAF sin ayuda, en orden, y llega a una conclusión distinta de la inicial.',
       },
       {
         id: '1.5',
         titulo: 'Los juicios sobre ti',
         objetivo: 'Revisar los juicios maestros que tiene sobre sí y que sostienen su dolor.',
         contenido:
-          'Juicios maestros ("soy tímido", "no sirvo para hablar", "soy un fraude"): se viven como identidad, no como interpretación. La voz crítica interna. Separar "soy" de "hice" (la vergüenza dice "soy malo"; la culpa, "hice algo mal"). Defusión: "estoy teniendo el pensamiento de que no sirvo" pone distancia. Autocompasión: tratarse como trataría a alguien que quiere.',
+          'Juicios secundarios (circunstanciales: "la presentación estuvo larga") y juicios maestros ("soy tímido", "no sirvo para hablar", "nunca soy suficiente", "para que me quieran debo sacrificarme"): premisas raíz que se viven como identidad, no como interpretación. Se llega a ellos siguiendo la cadena del discurso. La voz crítica interna. Separar "soy" de "hice" (la vergüenza dice "soy malo"; la culpa, "hice algo mal"). Defusión: "estoy teniendo el pensamiento de que no sirvo" pone distancia. Autocompasión: tratarse como trataría a alguien que quiere.',
         ejercicio:
-          'Identifiquen su juicio maestro más fuerte (mira su perfil). Fúndenlo con las 5 condiciones y reformúlenlo como un juicio acotado y abierto ("hoy me cuesta hablar ante grupos grandes; puedo aprender"). Pídele que lo diga en voz alta y que note qué pasa en el cuerpo.',
+          'Sigan la cadena de su discurso hasta su juicio maestro más fuerte (mira su perfil). Fúndenlo con PEDAF y reformúlenlo como un juicio acotado y abierto ("hoy me cuesta hablar ante grupos grandes; puedo aprender"). Pídele que lo diga en voz alta y que note qué pasa en el cuerpo.',
         practica:
           'Cada vez que aparezca la voz crítica: anotar el hecho, el juicio que se dijo y la reformulación acotada. Al final del día, una frase amable hacia sí.',
         dominio: 'Nombra su juicio maestro, lo funda con hechos y lo reformula con sus palabras de manera creíble para sí.',
@@ -78,7 +78,7 @@ export const PROGRAMA = {
         titulo: 'Interpretaciones que abren posibilidades',
         objetivo: 'Elegir interpretaciones más poderosas ante los quiebres.',
         contenido:
-          'Un quiebre es la interrupción del fluir; no es lo que pasa sino cómo se interpreta. No buscamos la interpretación "verdadera" sino la que abre más posibilidades de acción y sigue fundada en los hechos. Responsabilidad = habilidad para responder: de víctima ("me pasa") a protagonista ("¿qué puedo hacer?").',
+          'Un quiebre es la interrupción del fluir; no es lo que pasa sino cómo se interpreta. No buscamos la interpretación "verdadera" sino la que abre más posibilidades de acción y sigue fundada en los hechos. El dolor es biológico; el sufrimiento vive en la historia que nos contamos y se puede transformar, sin negar lo que pasó. Responsabilidad = habilidad para responder: de víctima ("me pasa") a protagonista ("¿qué puedo hacer?").',
         ejercicio:
           'Tomen un quiebre real y actual. Que construya tres interpretaciones distintas del mismo hecho y elija la que más acción le abre. Luego, ¿qué hará distinto desde ahí?',
         practica: 'Ante cada quiebre de la semana, generar dos interpretaciones antes de actuar y elegir conscientemente desde cuál responder.',
@@ -86,7 +86,7 @@ export const PROGRAMA = {
       },
     ],
     evaluacion:
-      'Evaluación integradora (toma una sesión entera). 1) Cuéntale una historia con 8 elementos (hechos, juicios y juicios disfrazados de hechos) para clasificar y justificar. 2) Pídele que funde en voz alta, con las 5 condiciones, un juicio de esa historia. 3) Pídele que aplique todo a su juicio maestro: cuál es, qué hechos lo sostienen y cómo lo reformula. Sé exigente: aprobar exige dominio, no memoria.',
+      'Evaluación integradora (toma una sesión entera). 1) Cuéntale una historia con 8 elementos (hechos, juicios y juicios disfrazados de hechos) para clasificar y justificar. 2) Pídele que funde en voz alta, con PEDAF, un juicio de esa historia. 3) Pídele que aplique todo a su juicio maestro: cuál es, qué hechos lo sostienen y cómo lo reformula. Sé exigente: aprobar exige dominio, no memoria.',
   },
   2: {
     nombre: 'El Diseñador de Realidades',
@@ -121,9 +121,9 @@ export const PROGRAMA = {
         titulo: '"No sé", "gracias" y "perdón"',
         objetivo: 'Usar las declaraciones que abren el aprendizaje y reparan los vínculos.',
         contenido:
-          '"No sé" abre la puerta al aprendizaje (el que cree saber no aprende). "Gracias" reconoce lo recibido y cambia el estado de ánimo. "Perdón" tiene dos caras: pedirlo (hacerse cargo sin excusas) y otorgarlo (soltar el reclamo para liberarse, que no es olvidar ni justificar). "Me equivoqué" como acto de grandeza.',
+          '"No sé" abre la puerta al aprendizaje (el que cree saber no aprende). "Gracias" reconoce lo recibido y cambia el estado de ánimo. "Perdón" en tres formas: pido perdón (hacerse cargo sin excusas), te perdono (soltar la deuda emocional que ata al pasado; no es olvidar ni justificar) y me perdono (dejar de castigarse). "Te quiero" legitima al otro en su diferencia. "Me equivoqué" como acto de grandeza.',
         ejercicio:
-          'Que elija a alguien a quien le debe un "gracias" o un "perdón" y lo formule en voz alta, en primera persona, como si estuviera frente a esa persona. Dale devolución de lo que transmite.',
+          'Que elija a alguien a quien le debe un "gracias", un "perdón" o un "te quiero" (o un "me perdono" pendiente consigo) y lo formule en voz alta, en primera persona, como si estuviera frente a esa persona. Dale devolución de lo que transmite.',
         practica: 'Hacer una de esas declaraciones pendientes en la vida real (en persona, por mensaje o por carta) y anotar qué se movió.',
         dominio: 'Formula un perdón o un agradecimiento sin justificaciones ni "peros", y distingue perdonar de olvidar.',
       },
@@ -175,7 +175,7 @@ export const PROGRAMA = {
         titulo: 'El cuerpo habla',
         objetivo: 'Reconocer y elegir posturas que transmiten apertura y seguridad.',
         contenido:
-          'Posturas de cierre (hombros adelante, brazos cruzados, mirada baja) y de apertura (eje vertical, pecho abierto, mirada al frente, manos visibles). Centro y enraizamiento: pies firmes, peso repartido. La mirada sostenida. Gestos que acompañan el sentido. No presentes como hecho el efecto hormonal de las "posturas de poder": no se confirmó.',
+          'Posturas de cierre (hombros adelante, brazos cruzados, mirada baja) y de apertura (eje vertical, pecho abierto, mirada al frente, manos visibles). Cuatro disposiciones corporales: estabilidad (sostén y límites), apertura (acogida y empatía), flexibilidad (adaptación y juego) y resolución (impulso para avanzar); identifiquen cuál le falta para su dificultad. Centro y enraizamiento: pies firmes, peso repartido. La mirada sostenida. Gestos que acompañan el sentido. No presentes como hecho el efecto hormonal de las "posturas de poder": no se confirmó.',
         ejercicio:
           'Con la cámara activa (pídeselo y que se vea de la cintura para arriba): obsérvala, describe lo que ves con precisión y corrígela paso a paso (pies, eje, hombros, mentón, mirada, manos). Que diga una frase en postura de cierre y luego en apertura, y note la diferencia. Sin cámara, guíala para que se describa.',
         practica: 'Antes de cada conversación importante del día, un minuto de postura de centro; anotar cómo se sintió al hablar.',
@@ -262,11 +262,11 @@ export const PROGRAMA = {
         titulo: 'De la queja al reclamo',
         objetivo: 'Transformar quejas y resentimiento en reclamos responsables.',
         contenido:
-          'La queja habla del otro y no cambia nada; el reclamo responsable se hace a quien corresponde: hechos (qué se prometió y qué pasó), impacto, pedido de reparación y nuevo compromiso, sin descalificar a la persona. El resentimiento es un reclamo no hecho.',
+          'La queja reactiva mira al pasado, busca culpables, descalifica ("sos un irresponsable") y nace del resentimiento. El reclamo productivo mira al futuro y busca reparar, con firmeza y dignidad, en cuatro pasos: 1) el acuerdo previo, 2) el incumplimiento con hechos, 3) el impacto, 4) un nuevo pedido o coordinación. El resentimiento es un reclamo no hecho.',
         ejercicio:
           'Que identifique una queja recurrente (a quién le reclama en silencio). Construyan el reclamo responsable y ensáyenlo: tú haces de la otra persona y te pones a la defensiva.',
         practica: 'Hacer un reclamo responsable real (o, si no es el momento, escribirlo completo) y anotar el resultado.',
-        dominio: 'Hace un reclamo con hechos, impacto y pedido, sin juicios descalificadores, aun ante tu defensa.',
+        dominio: 'Hace un reclamo productivo con los cuatro pasos, sin juicios descalificadores, aun ante tu defensa.',
       },
       {
         id: '4.5',
@@ -305,7 +305,7 @@ export const PROGRAMA = {
         titulo: 'Estados de ánimo',
         objetivo: 'Reconocer y diseñar estados de ánimo propios y ajenos.',
         contenido:
-          'Los estados de ánimo son el trasfondo desde el que actuamos: resentimiento frente a aceptación y perdón; resignación frente a ambición; ansiedad frente a confianza. Se pueden diseñar desde el lenguaje (revisar juicios), el cuerpo (postura, respiración) y la emoción. Nombrarlos en otros como hipótesis, no como diagnóstico.',
+          'Los estados de ánimo son el trasfondo desde el que actuamos. Matriz: resentimiento (oposición a lo que no se puede cambiar: "no debió pasar") y paz (aceptarlo); resignación (oposición a lo posible: "nada va a cambiar") y ambición (ver posibilidades y actuar). El resentimiento se disuelve aceptando, perdonando y reclamando; la resignación, fundando el juicio de imposibilidad y con pequeñas acciones de éxito. También ansiedad frente a confianza. Se pueden diseñar desde el lenguaje (revisar juicios), el cuerpo (postura, respiración) y la emoción. Nombrarlos en otros como hipótesis, no como diagnóstico.',
         ejercicio:
           'Que identifique su estado de ánimo dominante en el área de su dificultad y los juicios que lo sostienen. Diseñen juntos cómo moverlo (un juicio nuevo, una práctica corporal, una acción).',
         practica: 'Registrar su estado de ánimo dos veces por día y aplicar una vez el diseño acordado.',

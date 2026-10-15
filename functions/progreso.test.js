@@ -175,7 +175,7 @@ test('práctica libre: instrucciones y herramientas propias', async () => {
   assert.match(practica.systemInstruction, /práctica libre/);
   assert.match(practica.systemInstruction, /«Poner un límite a mi hermano»/);
   const nombres = practica.tools[0].functionDeclarations.map((f) => f.name);
-  assert.deepEqual(nombres, ['actualizar_perfil', 'definir_trato', 'registrar_reflexion', 'asignar_tarea', 'dejar_frase', 'registrar_avance', 'guardar_resumen_sesion']);
+  assert.deepEqual(nombres, ['actualizar_perfil', 'definir_trato', 'registrar_derivacion', 'registrar_reflexion', 'asignar_tarea', 'dejar_frase', 'registrar_avance', 'guardar_resumen_sesion']);
   const programa = configuracionLive(progresoInicial());
   assert.ok(programa.tools[0].functionDeclarations.some((f) => f.name === 'registrar_evaluacion'));
 });
@@ -184,7 +184,9 @@ test('el coach incluye oficio y conocimiento ampliado en ambos modos', async () 
   const { instruccionesSistema, instruccionesPractica } = await import('./coach.js');
   for (const texto of [instruccionesSistema(progresoInicial()), instruccionesPractica(progresoInicial(), 'Pedir un aumento')]) {
     assert.match(texto, /Tu oficio/);
-    assert.match(texto, /Juicios fundados: las 5 condiciones/);
+    assert.match(texto, /Protocolo PEDAF/);
+    assert.match(texto, /Regla de oro/);
+    assert.match(texto, /Protocolo de derivación clínica/);
     assert.match(texto, /no finjas ser humano/);
   }
 });
@@ -391,7 +393,7 @@ test('el coach recibe la lección del día, el perfil y la psicología', async (
   assert.match(texto, /LECCIÓN DEL DÍA: DISPONIBLE\. Corresponde la 1\.1 \(«Tu punto de partida»\)/);
   assert.match(texto, /Motivo \(el dolor o la incomodidad principal\): Miedo a hablar en público/);
   assert.match(texto, /Temas sensibles: tratar con cuidado: Una burla en la escuela/);
-  assert.match(texto, /Principios informados en trauma/);
+  assert.match(texto, /informados en trauma/);
   assert.match(texto, /Centro de Asistencia al Suicida/);
   assert.match(texto, /EVALUACIÓN DEL NIVEL: NO DISPONIBLE/);
   const hoy = { ...p, lecciones: [{ nivel: 1, id: '1.1', dia: '2026-10-15', fecha: '2026-10-15T12:00:00Z', evidencia: 'Entrevista hecha.' }] };
@@ -425,4 +427,16 @@ test('trato: el coach no adivina el género, lo pregunta y lo respeta', async ()
   assert.match(instruccionesSistema(aplicarTrato(progresoInicial(), 'masculino').progreso), /háblale en MASCULINO/);
   assert.match(instruccionesSistema(aplicarTrato(progresoInicial(), 'neutro').progreso), /formas NEUTRAS/);
   assert.equal(aplicarReinicio(ella).progreso.trato, 'femenino');
+});
+
+test('derivación clínica: se registra, se retoma en la sesión siguiente y sobrevive al reinicio', async () => {
+  const { aplicarDerivacion, aplicarReinicio } = await import('./progreso.js');
+  const { instruccionesSistema, configuracionLive } = await import('./coach.js');
+  assert.equal(aplicarDerivacion(progresoInicial(), { estado: 'otra' }).cambio, false);
+  const p = aplicarDerivacion(progresoInicial(), { estado: 'sugerida', motivo: 'habló de desesperanza profunda' }).progreso;
+  assert.match(instruccionesSistema(p), /ATENCIÓN: el .* sugeriste acompañamiento profesional \(habló de desesperanza profunda\)/);
+  assert.equal(aplicarReinicio(p).progreso.derivacion.estado, 'sugerida');
+  const con = aplicarDerivacion(p, { estado: 'con_acompanamiento' }).progreso;
+  assert.match(instruccionesSistema(con), /el coaching lo complementa, no lo reemplaza/);
+  assert.ok(configuracionLive(p, { modo: 'practica', situacion: 'x' }).tools[0].functionDeclarations.some((f) => f.name === 'registrar_derivacion'));
 });

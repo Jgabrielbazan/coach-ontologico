@@ -25,6 +25,11 @@ en la PC y en el móvil, cada una por su cuenta. Entras con tu cuenta de Google 
   en la app y se puede borrar. El coach trabaja con principios informados en trauma,
   exposición gradual, autocompasión y reestructuración de juicios, con límites éticos y
   derivación profesional cuando hace falta (`functions/psicologia.js`).
+- **Metodología del manual técnico de coaching ontológico para agentes de IA:** valores
+  éticos (FICOP/ICF), acciones obligatorias y prohibidas, Regla de oro, levedad, kairos,
+  preguntas internas y externas, OSAR con tres órdenes de aprendizaje, enemigos del
+  aprendizaje, protocolo PEDAF, reclamo productivo, matriz de estados de ánimo, disposiciones
+  corporales y protocolo de derivación clínica paso a paso (con líneas de ayuda en la app).
 - **Cámara que mira de verdad:** al activarla el coach dice qué ve; el botón «Mirá mi postura»
   pide una devolución corporal en cualquier momento.
 - **Práctica libre:** ensayas una situación real y el coach hace de la otra persona

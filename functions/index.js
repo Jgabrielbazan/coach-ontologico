@@ -13,6 +13,7 @@ import {
   mensajeRecordatorio,
 } from './recordatorios.js';
 import {
+  aplicarDerivacion,
   aplicarTrato,
   aplicarBorrarPerfil,
   aplicarLeccion,
@@ -264,6 +265,13 @@ export const actualizarPerfil = onCall(async (request) => {
 export const borrarPerfil = onCall(async (request) => {
   const uid = usuarioAutorizado(request);
   const { mensaje } = await actualizarProgreso(uid, aplicarBorrarPerfil);
+  return { mensaje };
+});
+
+export const registrarDerivacion = onCall(async (request) => {
+  const uid = usuarioAutorizado(request);
+  const { estado, motivo } = request.data ?? {};
+  const { mensaje } = await actualizarProgreso(uid, (p) => aplicarDerivacion(p, { estado, motivo }));
   return { mensaje };
 });
 

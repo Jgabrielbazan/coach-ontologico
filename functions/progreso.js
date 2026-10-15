@@ -45,7 +45,7 @@ export const TRATOS = ['femenino', 'masculino', 'neutro'];
 export const CRITERIOS = {
   1: [
     { id: 'clasifica', texto: 'Clasifica bien al menos 7 de los 8 elementos y detecta los juicios disfrazados de hechos' },
-    { id: 'funda', texto: 'Funda un juicio en voz alta con las 5 condiciones, sin ayuda' },
+    { id: 'funda', texto: 'Funda un juicio en voz alta con PEDAF, sin ayuda' },
     { id: 'aplica', texto: 'Aplica las distinciones a su propio juicio maestro y lo reformula de forma creíble' },
   ],
   2: [
@@ -87,6 +87,7 @@ export function progresoInicial() {
     lecciones: [],
     perfil: {},
     trato: null,
+    derivacion: null,
     avatar: null,
     coach: 'femenino',
   };
@@ -346,6 +347,30 @@ export function aplicarAvatar(actual, avatar) {
   return { progreso, cambio: true, mensaje: 'Avatar actualizado.' };
 }
 
+/**
+ * Protocolo de derivación: el coach sugirió acompañamiento profesional ("sugerida")
+ * o la persona confirmó que ya lo tiene ("con_acompanamiento").
+ */
+export function aplicarDerivacion(actual, { estado, motivo } = {}) {
+  const progreso = structuredClone(normalizar(actual));
+  if (!['sugerida', 'con_acompanamiento'].includes(estado)) {
+    return { progreso, cambio: false, mensaje: `Estado de derivación desconocido: ${estado}` };
+  }
+  progreso.derivacion = {
+    estado,
+    motivo: String(motivo ?? '').replace(/\s+/g, ' ').trim().slice(0, 200),
+    fecha: new Date().toISOString(),
+  };
+  return {
+    progreso,
+    cambio: true,
+    mensaje:
+      estado === 'sugerida'
+        ? 'Derivación registrada: la app le muestra las líneas de ayuda. No sigas con el programa en esta sesión; acompaña y contén.'
+        : 'Registrado que cuenta con acompañamiento profesional. El coaching lo complementa, no lo reemplaza.',
+  };
+}
+
 /** Cómo quiere que el coach le hable: en femenino, en masculino o con formas neutras. */
 export function aplicarTrato(actual, trato) {
   const progreso = structuredClone(normalizar(actual));
@@ -356,9 +381,9 @@ export function aplicarTrato(actual, trato) {
 
 /** Vuelve al Nivel 1 conservando el coach, el avatar, el trato, el propósito, el perfil y los días practicados. */
 export function aplicarReinicio(actual) {
-  const { coach, avatar, trato, proposito, perfil, dias } = normalizar(actual);
+  const { coach, avatar, trato, proposito, perfil, dias, derivacion } = normalizar(actual);
   return {
-    progreso: { ...progresoInicial(), coach, avatar, trato, proposito, perfil, dias },
+    progreso: { ...progresoInicial(), coach, avatar, trato, proposito, perfil, dias, derivacion },
     cambio: true,
     mensaje: 'Programa reiniciado.',
   };
