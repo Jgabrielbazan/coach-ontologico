@@ -109,9 +109,10 @@ mejor.
 ### Publicación automática (recomendado)
 
 Una sola vez, en tu PC: doble clic en **`Activar publicación automática.cmd`**. Crea en tu
-proyecto de Google la cuenta `publicador-github` (solo con permisos para publicar), copia
-su llave al portapapeles y abre GitHub: en **Name** escribe `FIREBASE_SERVICE_ACCOUNT`,
-pega con Ctrl + V y pulsa **Add secret**.
+proyecto de Google la cuenta `publicador-github` (solo con permisos para publicar) y guarda
+su llave, cifrada, como secreto `FIREBASE_SERVICE_ACCOUNT` del repo: solo hay que autorizar
+"Firebase CLI" en GitHub cuando se abre el navegador. Si eso fallara, abre la llave en el Bloc
+de notas y GitHub para pegarla a mano, y la borra al terminar.
 
 Desde entonces, cada cambio que se sube al repo se publica solo
 (`.github/workflows/publicar.yml`); el avance se ve en la pestaña **Actions** de GitHub.

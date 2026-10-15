@@ -9,8 +9,9 @@ echo  ==========================================
 echo     Activar publicacion automatica
 echo  ==========================================
 echo.
-echo Crea un acceso de publicacion en tu proyecto de Google y copia su llave
-echo para pegarla UNA vez en GitHub. Despues, cada cambio se publica solo.
+echo Crea un acceso de publicacion en tu proyecto de Google y guarda su llave
+echo en GitHub. Solo tienes que autorizar GitHub en el navegador.
+echo Despues, cada cambio se publica solo.
 echo.
 if not exist node_modules (
   echo Primero ejecuta "Instalar y publicar.cmd".

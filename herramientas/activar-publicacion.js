@@ -1,17 +1,24 @@
 // Prepara la publicación automática desde GitHub:
 //  1. Crea en tu proyecto de Google una cuenta de servicio "publicador-github"
 //     con solo los permisos necesarios para publicar la app.
-//  2. Genera su llave y la copia al portapapeles (no queda guardada en ningún archivo).
-//  3. Abre GitHub en la página donde hay que pegarla, una sola vez.
+//  2. Genera su llave y la guarda cifrada como secreto del repo en GitHub
+//     (tú solo autorizas GitHub en el navegador; no hay que copiar nada).
+//  3. Si eso fallara, la abre en el Bloc de notas para pegarla a mano.
 // Usa la sesión de Firebase que ya iniciaste con "Instalar y publicar.cmd".
 import { spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { preguntar, terminar } from './preguntar.js';
 
 const require = createRequire(import.meta.url);
 const auth = require('firebase-tools/lib/auth');
+// libsodium viene con firebase-tools: cifra el secreto como exige GitHub.
+const libsodium = createRequire(require.resolve('firebase-tools/package.json'))('libsodium-wrappers');
 
 const REPO = 'Jgabrielbazan/coach-ontologico';
+const NOMBRE_SECRETO = 'FIREBASE_SERVICE_ACCOUNT';
 const ID_CUENTA = 'publicador-github';
 const ROLES = [
   'roles/firebase.admin', // hosting, reglas de Firestore
@@ -114,23 +121,62 @@ const llave = await conReintentos(() =>
 );
 const contenido = Buffer.from(llave.privateKeyData, 'base64').toString('utf8');
 
-const copiado = process.platform === 'win32' && spawnSync('clip', { input: contenido }).status === 0;
-if (!copiado) {
-  console.error('\nNo pude copiar la llave al portapapeles. Este paso está pensado para Windows.');
-  process.exit(1);
+/** Guarda la llave cifrada como secreto del repo usando la API de GitHub. */
+async function guardarEnGitHub(valor) {
+  console.log('  Se abre GitHub en el navegador: pulsa "Authorize" (autorizar) para Firebase CLI.');
+  const tokenGitHub = await auth.loginGithub();
+  const cabeceras = {
+    authorization: `token ${tokenGitHub}`,
+    accept: 'application/vnd.github+json',
+    'user-agent': 'coach-ontologico',
+  };
+  const base = `https://api.github.com/repos/${REPO}/actions/secrets`;
+  const clave = await fetch(`${base}/public-key`, { headers: cabeceras });
+  if (!clave.ok) throw new Error(`GitHub respondió ${clave.status} al pedir la clave pública del repo`);
+  const { key, key_id } = await clave.json();
+  await libsodium.ready;
+  const cifrado = libsodium.crypto_box_seal(Buffer.from(valor), Buffer.from(key, 'base64'));
+  const respuesta = await fetch(`${base}/${NOMBRE_SECRETO}`, {
+    method: 'PUT',
+    headers: { ...cabeceras, 'content-type': 'application/json' },
+    body: JSON.stringify({ encrypted_value: Buffer.from(cifrado).toString('base64'), key_id }),
+  });
+  if (!respuesta.ok) throw new Error(`GitHub respondió ${respuesta.status} al guardar el secreto`);
 }
 
-const pagina = `https://github.com/${REPO}/settings/secrets/actions/new`;
-spawnSync('cmd', ['/c', 'start', '', pagina], { stdio: 'ignore' });
+/** Plan B: abre la llave en el Bloc de notas para copiarla a mano, y la borra al terminar. */
+async function pegarAMano(valor) {
+  const carpeta = mkdtempSync(path.join(tmpdir(), 'coach-'));
+  const archivo = path.join(carpeta, 'llave-para-github.txt');
+  writeFileSync(archivo, valor, { mode: 0o600 });
+  const pagina = `https://github.com/${REPO}/settings/secrets/actions/new`;
+  try {
+    spawnSync('cmd', ['/c', 'start', '', pagina], { stdio: 'ignore' });
+    spawnSync('cmd', ['/c', 'start', '', 'notepad', archivo], { stdio: 'ignore' });
+    console.log(`
+  Se abrieron GitHub y el Bloc de notas (si GitHub no se abrió: ${pagina}).
+   1. En GitHub, "Nombre":  ${NOMBRE_SECRETO}
+   2. En el Bloc de notas: Ctrl + A y luego Ctrl + C
+   3. En GitHub, cuadro "Secreto": Ctrl + V  ->  "Agregar secreto"
+   4. Cierra el Bloc de notas SIN guardar cambios.`);
+    await preguntar('\n  Cuando termines, pulsa Enter aquí para borrar el archivo de la llave... ');
+  } finally {
+    terminar();
+    rmSync(carpeta, { recursive: true, force: true });
+  }
+}
 
-console.log(`
+paso('Guardando la llave en GitHub...');
+try {
+  await guardarEnGitHub(contenido);
+  terminar();
+  console.log(`
 ==========================================================
- La llave ya está COPIADA. Se abrió GitHub en el navegador.
- (Si no se abrió: ${pagina})
-
- 1. En "Name" escribe exactamente:   FIREBASE_SERVICE_ACCOUNT
- 2. En "Secret" pega con Ctrl + V
- 3. Pulsa "Add secret"
-
- Listo: desde ahora cada cambio se publica solo.
+ LISTO. La llave quedó guardada en GitHub como ${NOMBRE_SECRETO}.
+ Desde ahora cada cambio se publica solo.
 ==========================================================`);
+} catch (err) {
+  console.log(`  No pude guardarla automáticamente (${err.message}). Vamos a pegarla a mano.`);
+  await pegarAMano(contenido);
+  console.log('\n  Listo. Revisa que en GitHub aparezca FIREBASE_SERVICE_ACCOUNT en "secretos del repositorio".');
+}
