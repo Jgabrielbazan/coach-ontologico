@@ -77,11 +77,22 @@ export function aplicarReinicio(actual) {
   return { progreso: { ...progresoInicial(), coach: normalizar(actual).coach }, cambio: true, mensaje: 'Programa reiniciado.' };
 }
 
-export function aplicarResumen(actual, resumen) {
+/** Limpia la situación que escribe el usuario para la práctica libre. */
+export function limpiarSituacion(texto) {
+  return String(texto ?? '').replace(/\s+/g, ' ').trim().slice(0, 500);
+}
+
+/**
+ * Guarda el resumen de una sesión. `tipo` distingue las del programa de las
+ * de práctica libre (que además guardan la situación practicada).
+ */
+export function aplicarResumen(actual, resumen, { tipo = 'programa', situacion = '' } = {}) {
   const progreso = structuredClone(normalizar(actual));
   const texto = String(resumen ?? '').trim().slice(0, 3000);
   if (!texto) return { progreso, cambio: false, mensaje: 'Resumen vacío: no se guardó nada.' };
-  progreso.sesiones.push({ fecha: new Date().toISOString(), nivel: progreso.nivel, resumen: texto });
+  const sesion = { fecha: new Date().toISOString(), nivel: progreso.nivel, resumen: texto };
+  if (tipo === 'practica') Object.assign(sesion, { tipo, situacion: limpiarSituacion(situacion).slice(0, 200) });
+  progreso.sesiones.push(sesion);
   progreso.sesiones = progreso.sesiones.slice(-MAX_SESIONES_GUARDADAS);
   return { progreso, cambio: true, mensaje: 'Resumen guardado.' };
 }

@@ -13,6 +13,10 @@ const ui = {
   estado: $('estado'),
   video: $('vista-camara'),
   subtitulos: $('subtitulos'),
+  opcionesModo: document.querySelectorAll('.opcion-modo'),
+  panelPractica: $('panel-practica'),
+  campoSituacion: $('campo-situacion'),
+  sugerencias: document.querySelectorAll('.sugerencia'),
   conversacion: $('conversacion'),
   formularioMensaje: $('formulario-mensaje'),
   campoMensaje: $('campo-mensaje'),
@@ -48,7 +52,10 @@ const NIVELES = {
 };
 const PROGRESO_INICIAL = { nivel: 1, programaCompleto: false, evaluaciones: [], sesiones: [], coach: 'femenino' };
 
-const TEXTO_INICIO = '[Inicio de sesión: saluda en una frase y continúa el programa donde corresponde.]';
+const TEXTO_INICIO = {
+  programa: '[Inicio de sesión: saluda en una frase y continúa el programa donde corresponde.]',
+  practica: '[Inicio de práctica libre: saluda en una frase y empieza con tus preguntas de contexto sobre la situación.]',
+};
 const TEXTO_CIERRE = '[La sesión termina ahora: llama a guardar_resumen_sesion y despídete en una frase.]';
 const MAX_REINTENTOS = 3;
 
@@ -67,6 +74,8 @@ let avisarResumenGuardado = null;
 let progresoActual = PROGRESO_INICIAL;
 let dejarDeEscuchar = null;
 let estadoVisual = 'inactivo';
+let modo = 'programa'; // 'programa' o 'practica'
+let situacionActiva = ''; // la situación de la práctica en curso
 let diagnostico = null; // intervalo que vigila si tu voz llega al coach
 let avisoMicrofono = '';
 
@@ -93,6 +102,7 @@ function mostrarProgreso(datos) {
   }
   ui.etiquetaNivel.textContent = p.programaCompleto ? 'Programa completo' : `Nivel ${p.nivel} de 3`;
   ui.nombreNivel.textContent = p.programaCompleto ? 'Coherencia integrada' : NIVELES[p.nivel];
+  actualizarEncabezado();
   for (const item of ui.niveles.children) {
     const nivel = Number(item.dataset.nivel);
     item.className = p.programaCompleto || nivel < p.nivel ? 'hecho' : nivel === p.nivel ? 'actual' : '';
@@ -109,9 +119,41 @@ function mostrarProgreso(datos) {
   const sesion = p.sesiones.at(-1);
   ui.tarjetaSesion.hidden = !sesion;
   if (sesion) {
-    ui.ultimaSesion.textContent = sesion.resumen;
+    const prefijo = sesion.tipo === 'practica' ? `Práctica: ${sesion.situacion}. ` : '';
+    ui.ultimaSesion.textContent = prefijo + sesion.resumen;
     ui.fechaSesion.textContent = fechaCorta.format(new Date(sesion.fecha));
   }
+}
+
+/** El encabezado muestra el nivel en el programa, o la situación en la práctica libre. */
+function actualizarEncabezado() {
+  if (modo !== 'practica') {
+    const p = progresoActual;
+    ui.etiquetaNivel.textContent = p.programaCompleto ? 'Programa completo' : `Nivel ${p.nivel} de 3`;
+    ui.nombreNivel.textContent = p.programaCompleto ? 'Coherencia integrada' : NIVELES[p.nivel];
+    return;
+  }
+  ui.etiquetaNivel.textContent = 'Práctica libre';
+  ui.nombreNivel.textContent = activa && situacionActiva ? situacionActiva : 'Ensaya una situación real';
+}
+
+function elegirModo(nuevo) {
+  if (activa) return;
+  modo = nuevo;
+  for (const opcion of ui.opcionesModo) opcion.setAttribute('aria-selected', String(opcion.dataset.modo === modo));
+  try {
+    localStorage.setItem('modo', modo);
+  } catch {}
+  actualizarEncabezado();
+  actualizarEstado();
+}
+
+for (const opcion of ui.opcionesModo) opcion.addEventListener('click', () => elegirModo(opcion.dataset.modo));
+for (const sugerencia of ui.sugerencias) {
+  sugerencia.addEventListener('click', () => {
+    ui.campoSituacion.value = sugerencia.textContent;
+    ui.campoSituacion.focus();
+  });
 }
 
 function actualizarEstado(mensaje) {
@@ -131,6 +173,8 @@ function actualizarEstado(mensaje) {
   ui.estado.textContent = mensaje ?? texto;
   ui.controles.hidden = !activa;
   ui.medidor.hidden = !activa;
+  ui.panelPractica.hidden = activa || modo !== 'practica';
+  for (const opcion of ui.opcionesModo) opcion.disabled = activa;
   for (const opcion of ui.opcionesCoach) opcion.disabled = activa;
 }
 
@@ -188,7 +232,11 @@ async function ejecutarHerramienta({ name, args = {} }) {
       return { resultado: mensaje };
     }
     case 'guardar_resumen_sesion': {
-      const { mensaje } = await llamar('guardarResumen', { resumen: args.resumen });
+      const { mensaje } = await llamar('guardarResumen', {
+        resumen: args.resumen,
+        tipo: modo,
+        situacion: situacionActiva,
+      });
       avisarResumenGuardado?.();
       return { resultado: mensaje };
     }
@@ -243,7 +291,7 @@ function alMensaje(mensaje) {
 }
 
 async function conectar() {
-  const { token, modelo, config } = await llamar('crearSesion');
+  const { token, modelo, config } = await llamar('crearSesion', { modo, situacion: situacionActiva });
   const ai = new GoogleGenAI({ apiKey: token, httpOptions: { apiVersion: 'v1alpha' } });
   const mia = ++idConexion;
   const nueva = await ai.live.connect({
@@ -312,12 +360,19 @@ async function iniciar() {
     actualizarEstado('El micrófono solo funciona con https:// o en localhost.');
     return;
   }
+  situacionActiva = modo === 'practica' ? ui.campoSituacion.value.replace(/\s+/g, ' ').trim() : '';
+  if (modo === 'practica' && situacionActiva.length < 3) {
+    actualizarEstado('Escribe qué situación quieres practicar, o elige una sugerencia.');
+    ui.campoSituacion.focus();
+    return;
+  }
   activa = true;
   conectando = true;
   reintentos = 0;
   manejadorReanudacion = null;
   ui.subtitulos.replaceChildren();
   ultimoHablante = null;
+  actualizarEncabezado();
   actualizarEstado();
 
   try {
@@ -340,7 +395,7 @@ async function iniciar() {
   try {
     bloqueoPantalla = await navigator.wakeLock?.request('screen');
   } catch {}
-  sesion.sendClientContent({ turns: [{ role: 'user', parts: [{ text: TEXTO_INICIO }] }], turnComplete: true });
+  sesion.sendClientContent({ turns: [{ role: 'user', parts: [{ text: TEXTO_INICIO[modo] }] }], turnComplete: true });
   iniciarDiagnostico();
   actualizarEstado();
 }
@@ -467,6 +522,7 @@ function finalizar(mensaje) {
   bloqueoPantalla = null;
   ui.silencio.setAttribute('aria-pressed', 'false');
   ponerTexto(ui.silencio, 'Silenciar');
+  actualizarEncabezado();
   actualizarEstado(mensaje);
 }
 
@@ -607,6 +663,10 @@ async function arrancar() {
     });
   });
 }
+
+try {
+  if (localStorage.getItem('modo') === 'practica') elegirModo('practica');
+} catch {}
 
 arrancar();
 

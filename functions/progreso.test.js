@@ -70,3 +70,25 @@ test('las instrucciones usan la identidad del coach elegido', async () => {
   assert.equal(configuracionLive(masc).speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName, 'Charon');
   assert.match(instruccionesSistema(progresoInicial()), /Te llamas Sofía/);
 });
+
+test('práctica libre: resumen marcado con la situación', () => {
+  const r = aplicarResumen(progresoInicial(), 'Practicamos pedir un aumento.', {
+    tipo: 'practica',
+    situacion: '  Pedirle   un aumento a mi jefe  ',
+  });
+  const sesion = r.progreso.sesiones[0];
+  assert.equal(sesion.tipo, 'practica');
+  assert.equal(sesion.situacion, 'Pedirle un aumento a mi jefe');
+  assert.equal(aplicarResumen(progresoInicial(), 'normal').progreso.sesiones[0].tipo, undefined);
+});
+
+test('práctica libre: instrucciones y herramientas propias', async () => {
+  const { configuracionLive } = await import('./coach.js');
+  const practica = configuracionLive(progresoInicial(), { modo: 'practica', situacion: 'Poner un límite a mi hermano' });
+  assert.match(practica.systemInstruction, /práctica libre/);
+  assert.match(practica.systemInstruction, /«Poner un límite a mi hermano»/);
+  const nombres = practica.tools[0].functionDeclarations.map((f) => f.name);
+  assert.deepEqual(nombres, ['guardar_resumen_sesion']);
+  const programa = configuracionLive(progresoInicial());
+  assert.ok(programa.tools[0].functionDeclarations.some((f) => f.name === 'registrar_evaluacion'));
+});

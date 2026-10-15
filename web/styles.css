@@ -398,6 +398,107 @@ button {
   margin-top: 8px;
 }
 
+/* ---------- Modo: programa / práctica libre ---------- */
+
+.selector-modo {
+  display: inline-flex;
+  padding: 4px;
+  gap: 4px;
+  border-radius: 999px;
+  border: 1px solid var(--borde);
+  background: var(--vidrio);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  margin-bottom: 14px;
+}
+
+.opcion-modo {
+  min-height: 36px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--texto-suave);
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.opcion-modo[aria-selected='true'] {
+  background: linear-gradient(135deg, #7c5cf0, #0891b2);
+  color: #ffffff;
+  box-shadow: 0 4px 14px var(--sombra);
+}
+
+.opcion-modo:disabled {
+  cursor: not-allowed;
+}
+
+.panel-practica {
+  width: min(100%, 620px);
+  margin-top: 16px;
+  padding: 16px;
+  border-radius: var(--radio);
+  border: 1px solid var(--borde);
+  background: var(--vidrio);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  text-align: left;
+}
+
+.panel-practica label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.panel-practica textarea {
+  width: 100%;
+  min-height: 64px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--borde);
+  background: var(--vidrio-fuerte);
+  color: var(--texto);
+  font: inherit;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.panel-practica textarea:focus-visible {
+  outline: 2px solid var(--cian);
+  outline-offset: 1px;
+}
+
+.sugerencias {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.sugerencia {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--borde);
+  background: var(--vidrio-fuerte);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.sugerencia:hover {
+  border-color: var(--actual-borde);
+}
+
+.ayuda-practica {
+  margin: 10px 0 0;
+  font-size: 0.8rem;
+  color: var(--texto-suave);
+}
+
 .titulo-nivel {
   margin: 8px 0 0;
   font-family: var(--fuente-titulo);

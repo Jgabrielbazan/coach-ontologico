@@ -145,10 +145,33 @@
       </aside>
 
       <main class="escenario">
+        <div class="selector-modo" role="tablist" aria-label="Modo">
+          <button type="button" role="tab" aria-selected="true" data-modo="programa" class="opcion-modo">Programa</button>
+          <button type="button" role="tab" aria-selected="false" data-modo="practica" class="opcion-modo">Práctica libre</button>
+        </div>
+
         <div class="encabezado-nivel">
           <p class="sobretitulo" id="etiqueta-nivel">Nivel 1 de 3</p>
           <h1 class="titulo-nivel" id="nombre-nivel">El Observador Inicial</h1>
         </div>
+
+        <section class="panel-practica" id="panel-practica" hidden>
+          <label for="campo-situacion">¿Qué situación real quieres ensayar?</label>
+          <textarea
+            id="campo-situacion"
+            rows="2"
+            maxlength="500"
+            placeholder="Ej.: Tengo que pedirle un aumento a mi jefe, que suele evitar el tema."
+          ></textarea>
+          <div class="sugerencias" aria-label="Sugerencias">
+            <button type="button" class="sugerencia">Pedir un aumento</button>
+            <button type="button" class="sugerencia">Poner un límite a alguien cercano</button>
+            <button type="button" class="sugerencia">Dar una mala noticia</button>
+            <button type="button" class="sugerencia">Decir que no a un pedido</button>
+            <button type="button" class="sugerencia">Hablar frente a un grupo</button>
+          </div>
+          <p class="ayuda-practica">El coach hace de la otra persona. Di <strong>"pausa"</strong> cuando quieras una indicación.</p>
+        </section>
 
         <div class="orbe-zona">
           <canvas id="orbe-coach" aria-hidden="true"></canvas>

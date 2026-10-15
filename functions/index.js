@@ -10,6 +10,7 @@ import {
   aplicarEvaluacion,
   aplicarReinicio,
   aplicarResumen,
+  limpiarSituacion,
   normalizar,
   progresoInicial,
 } from './progreso.js';
@@ -69,6 +70,11 @@ function mensajeDeGemini(err) {
  */
 export const crearSesion = onCall({ secrets: [GEMINI_API_KEY] }, async (request) => {
   const uid = usuarioAutorizado(request);
+  const modo = request.data?.modo === 'practica' ? 'practica' : 'programa';
+  const situacion = limpiarSituacion(request.data?.situacion);
+  if (modo === 'practica' && situacion.length < 3) {
+    throw new HttpsError('invalid-argument', 'Escribe qué situación quieres practicar.');
+  }
   const clave = GEMINI_API_KEY.value().trim();
   if (!clave) {
     throw new HttpsError(
@@ -95,7 +101,7 @@ export const crearSesion = onCall({ secrets: [GEMINI_API_KEY] }, async (request)
   return {
     token: token.name,
     modelo: GEMINI_MODEL.value(),
-    config: configuracionLive(await leerProgreso(uid)),
+    config: configuracionLive(await leerProgreso(uid), { modo, situacion }),
   };
 });
 
@@ -107,7 +113,8 @@ export const registrarEvaluacion = onCall(async (request) => {
 
 export const guardarResumen = onCall(async (request) => {
   const uid = usuarioAutorizado(request);
-  const { mensaje } = await actualizarProgreso(uid, (p) => aplicarResumen(p, request.data?.resumen));
+  const { resumen, tipo, situacion } = request.data ?? {};
+  const { mensaje } = await actualizarProgreso(uid, (p) => aplicarResumen(p, resumen, { tipo, situacion }));
   return { mensaje };
 });
 
