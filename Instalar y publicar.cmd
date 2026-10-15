@@ -53,11 +53,10 @@ if exist functions\.env (
 )
 call npx firebase functions:secrets:access GEMINI_API_KEY >nul 2>nul
 if errorlevel 1 (
-  echo Pega tu clave de Google AI Studio y pulsa Enter ^(no se ve mientras la pegas, es normal^):
-  call npx firebase functions:secrets:set GEMINI_API_KEY
+  node herramientas\guardar-clave.js
   if errorlevel 1 goto error
 ) else (
-  echo La clave de Gemini ya estaba guardada.
+  echo La clave de Gemini ya estaba guardada. Para cambiarla usa "Cambiar clave de Gemini.cmd".
 )
 
 echo.

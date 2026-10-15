@@ -62,7 +62,14 @@ function mensajeDeGemini(err) {
  */
 export const crearSesion = onCall({ secrets: [GEMINI_API_KEY] }, async (request) => {
   const uid = usuarioAutorizado(request);
-  const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY.value(), httpOptions: { apiVersion: 'v1alpha' } });
+  const clave = GEMINI_API_KEY.value().trim();
+  if (!clave) {
+    throw new HttpsError(
+      'failed-precondition',
+      'La clave de Gemini guardada está vacía. Ejecuta "Cambiar clave de Gemini.cmd" en tu PC.',
+    );
+  }
+  const ai = new GoogleGenAI({ apiKey: clave, httpOptions: { apiVersion: 'v1alpha' } });
   const ahora = Date.now();
   let token;
   try {
