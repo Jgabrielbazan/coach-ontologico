@@ -7,6 +7,21 @@ export function aBase64(buffer) {
   return btoa(binario);
 }
 
+/** Volumen actual (0 a ~1) de lo que pasa por un AnalyserNode. */
+function medirNivel(analizador, muestras) {
+  if (!analizador) return 0;
+  analizador.getFloatTimeDomainData(muestras);
+  let suma = 0;
+  for (const m of muestras) suma += m * m;
+  return Math.min(1, Math.sqrt(suma / muestras.length) * 4);
+}
+
+function crearAnalizador(contexto) {
+  const analizador = contexto.createAnalyser();
+  analizador.fftSize = 512;
+  return [analizador, new Float32Array(analizador.fftSize)];
+}
+
 function desdeBase64(texto) {
   const binario = atob(texto);
   const bytes = new Uint8Array(binario.length);
@@ -33,6 +48,12 @@ export class Microfono {
       if (!this.silenciado) this.alBloque(aBase64(e.data));
     };
     this.fuente.connect(this.nodo);
+    [this.analizador, this.muestras] = crearAnalizador(this.contexto);
+    this.fuente.connect(this.analizador);
+  }
+
+  nivel() {
+    return this.silenciado ? 0 : medirNivel(this.analizador, this.muestras);
   }
 
   detener() {
@@ -40,7 +61,7 @@ export class Microfono {
     this.nodo?.disconnect();
     this.fuente?.disconnect();
     this.contexto?.close();
-    this.flujo = this.contexto = this.fuente = this.nodo = null;
+    this.flujo = this.contexto = this.fuente = this.nodo = this.analizador = null;
   }
 }
 
@@ -54,8 +75,16 @@ export class Reproductor {
 
   // Debe llamarse desde un gesto del usuario (clic) para que el navegador permita el audio.
   async preparar() {
-    this.contexto ??= new AudioContext({ sampleRate: 24000 });
+    if (!this.contexto) {
+      this.contexto = new AudioContext({ sampleRate: 24000 });
+      [this.analizador, this.muestras] = crearAnalizador(this.contexto);
+      this.analizador.connect(this.contexto.destination);
+    }
     if (this.contexto.state === 'suspended') await this.contexto.resume();
+  }
+
+  nivel() {
+    return this.hablando ? medirNivel(this.analizador, this.muestras) : 0;
   }
 
   get hablando() {
@@ -70,7 +99,7 @@ export class Reproductor {
 
     const fuente = this.contexto.createBufferSource();
     fuente.buffer = buffer;
-    fuente.connect(this.contexto.destination);
+    fuente.connect(this.analizador);
     const inicio = Math.max(this.contexto.currentTime + 0.02, this.siguienteInicio);
     fuente.start(inicio);
     this.siguienteInicio = inicio + buffer.duration;

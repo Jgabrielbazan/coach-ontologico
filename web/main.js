@@ -1,12 +1,13 @@
 import { GoogleGenAI } from '@google/genai';
 import { Camara, Microfono, Reproductor } from './audio.js';
+import { Orbe } from './orbe.js';
 import { alCambiarUsuario, entrarConGoogle, escucharProgreso, iniciarFirebase, llamar, salir } from './firebase.js';
 
 const $ = (id) => document.getElementById(id);
 const ui = {
   etiquetaNivel: $('etiqueta-nivel'),
   nombreNivel: $('nombre-nivel'),
-  progreso: $('progreso'),
+  niveles: $('niveles'),
   boton: $('boton-principal'),
   textoBoton: $('texto-boton'),
   estado: $('estado'),
@@ -16,7 +17,12 @@ const ui = {
   silencio: $('boton-silencio'),
   camara: $('boton-camara'),
   verTexto: $('boton-subtitulos'),
+  tarjetaFeedback: $('tarjeta-feedback'),
   feedback: $('ultimo-feedback'),
+  puntajeFeedback: $('puntaje-feedback'),
+  tarjetaSesion: $('tarjeta-sesion'),
+  ultimaSesion: $('ultima-sesion'),
+  fechaSesion: $('fecha-sesion'),
   reiniciar: $('boton-reiniciar'),
   pantallaEntrar: $('pantalla-entrar'),
   pantallaCoach: $('pantalla-coach'),
@@ -51,6 +57,20 @@ let bloqueoPantalla = null;
 let avisarResumenGuardado = null;
 let progresoActual = PROGRESO_INICIAL;
 let dejarDeEscuchar = null;
+let estadoVisual = 'inactivo';
+
+new Orbe($('orbe-entrar'), { obtenerEstado: () => 'inactivo' });
+new Orbe($('orbe-coach'), {
+  obtenerEstado: () => estadoVisual,
+  obtenerNivel: () => (estadoVisual === 'hablando' ? reproductor.nivel() : (microfono?.nivel() ?? 0)),
+});
+
+const fechaCorta = new Intl.DateTimeFormat('es', { day: 'numeric', month: 'short' });
+
+// Los botones de control tienen icono + texto: solo cambiamos el texto.
+function ponerTexto(boton, texto) {
+  boton.querySelector('span').textContent = texto;
+}
 
 // ---------- Interfaz ----------
 
@@ -59,26 +79,37 @@ function mostrarProgreso(datos) {
   progresoActual = p;
   ui.etiquetaNivel.textContent = p.programaCompleto ? 'Programa completo' : `Nivel ${p.nivel} de 3`;
   ui.nombreNivel.textContent = p.programaCompleto ? 'Coherencia integrada' : NIVELES[p.nivel];
-  for (const punto of ui.progreso.children) {
-    const nivel = Number(punto.dataset.nivel);
-    punto.className = p.programaCompleto || nivel < p.nivel ? 'hecho' : nivel === p.nivel ? 'actual' : '';
+  for (const item of ui.niveles.children) {
+    const nivel = Number(item.dataset.nivel);
+    item.className = p.programaCompleto || nivel < p.nivel ? 'hecho' : nivel === p.nivel ? 'actual' : '';
+    item.toggleAttribute('aria-current', !p.programaCompleto && nivel === p.nivel);
   }
+
   const ultima = p.evaluaciones.at(-1);
-  ui.feedback.hidden = !ultima;
+  ui.tarjetaFeedback.hidden = !ultima;
   if (ultima) {
-    ui.feedback.textContent = `Última evaluación (nivel ${ultima.nivel}, ${ultima.puntuacion}/100): ${ultima.feedback}`;
+    ui.feedback.textContent = ultima.feedback;
+    ui.puntajeFeedback.textContent = `${ultima.puntuacion}/100`;
+  }
+
+  const sesion = p.sesiones.at(-1);
+  ui.tarjetaSesion.hidden = !sesion;
+  if (sesion) {
+    ui.ultimaSesion.textContent = sesion.resumen;
+    ui.fechaSesion.textContent = fechaCorta.format(new Date(sesion.fecha));
   }
 }
 
 function actualizarEstado(mensaje) {
   let estado = 'inactivo';
-  let texto = 'Toca para hablar con tu coach';
+  let texto = 'Toca el orbe para hablar con tu coach';
   if (terminando) [estado, texto] = ['conectando', 'Cerrando la sesión…'];
   else if (conectando) [estado, texto] = ['conectando', 'Conectando…'];
   else if (activa && reproductor.hablando) [estado, texto] = ['hablando', 'Tu coach está hablando. Puedes interrumpirlo.'];
   else if (activa && microfono?.silenciado) [estado, texto] = ['silenciado', 'Micrófono silenciado'];
   else if (activa) [estado, texto] = ['escuchando', 'Te escucho…'];
 
+  estadoVisual = estado;
   ui.boton.dataset.estado = estado;
   ui.textoBoton.textContent = activa ? 'Terminar' : 'Empezar sesión';
   ui.boton.disabled = terminando;
@@ -308,7 +339,7 @@ function finalizar(mensaje) {
   bloqueoPantalla?.release().catch(() => {});
   bloqueoPantalla = null;
   ui.silencio.setAttribute('aria-pressed', 'false');
-  ui.silencio.textContent = 'Silenciar micrófono';
+  ponerTexto(ui.silencio, 'Silenciar');
   actualizarEstado(mensaje);
 }
 
@@ -319,7 +350,7 @@ function apagarCamara() {
   camara = null;
   ui.video.hidden = true;
   ui.camara.setAttribute('aria-pressed', 'false');
-  ui.camara.textContent = 'Activar cámara';
+  ponerTexto(ui.camara, 'Cámara');
 }
 
 ui.boton.addEventListener('click', () => (activa ? terminar() : iniciar()));
@@ -329,7 +360,7 @@ ui.silencio.addEventListener('click', () => {
   microfono.silenciado = !microfono.silenciado;
   if (microfono.silenciado) sesion?.sendRealtimeInput({ audioStreamEnd: true });
   ui.silencio.setAttribute('aria-pressed', String(microfono.silenciado));
-  ui.silencio.textContent = microfono.silenciado ? 'Activar micrófono' : 'Silenciar micrófono';
+  ponerTexto(ui.silencio, microfono.silenciado ? 'Activar micrófono' : 'Silenciar');
   actualizarEstado();
 });
 
@@ -345,7 +376,7 @@ ui.camara.addEventListener('click', async () => {
     ui.video.hidden = false;
     await camara.iniciar();
     ui.camara.setAttribute('aria-pressed', 'true');
-    ui.camara.textContent = 'Apagar cámara';
+    ponerTexto(ui.camara, 'Apagar cámara');
   } catch (err) {
     apagarCamara();
     actualizarEstado(err.name === 'NotAllowedError' ? 'Necesito permiso para usar la cámara.' : err.message);
@@ -355,7 +386,7 @@ ui.camara.addEventListener('click', async () => {
 ui.verTexto.addEventListener('click', () => {
   ui.subtitulos.hidden = !ui.subtitulos.hidden;
   ui.verTexto.setAttribute('aria-pressed', String(!ui.subtitulos.hidden));
-  ui.verTexto.textContent = ui.subtitulos.hidden ? 'Ver texto' : 'Ocultar texto';
+  ponerTexto(ui.verTexto, ui.subtitulos.hidden ? 'Texto' : 'Ocultar texto');
 });
 
 ui.reiniciar.addEventListener('click', async () => {
@@ -367,6 +398,19 @@ ui.reiniciar.addEventListener('click', async () => {
     actualizarEstado(err.message);
   }
 });
+
+// ---------- Modo día / noche ----------
+
+function cambiarTema() {
+  const tema = document.documentElement.dataset.tema === 'noche' ? 'dia' : 'noche';
+  document.documentElement.dataset.tema = tema;
+  document.querySelector('meta[name="theme-color"]').content = tema === 'noche' ? '#0b0a14' : '#f6f5fa';
+  try {
+    localStorage.setItem('tema', tema);
+  } catch {}
+}
+
+for (const boton of document.querySelectorAll('.boton-tema')) boton.addEventListener('click', cambiarTema);
 
 // ---------- Cuenta y arranque ----------
 

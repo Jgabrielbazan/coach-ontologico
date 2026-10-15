@@ -3,63 +3,160 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#14121f" />
+    <meta name="theme-color" content="#f6f5fa" />
     <meta name="description" content="Coach ontológico por voz en tiempo real." />
     <title>Coach Ontológico</title>
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/icono.svg" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="/icono.svg" />
+    <link rel="apple-touch-icon" href="/icono-192.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@500;600;700&display=swap"
+    />
     <link rel="stylesheet" href="./styles.css" />
+    <script>
+      // Aplica el tema antes de pintar para que no parpadee: el guardado, o el del sistema.
+      (function () {
+        var tema;
+        try {
+          tema = localStorage.getItem('tema');
+        } catch (e) {}
+        if (tema !== 'dia' && tema !== 'noche') {
+          tema = matchMedia('(prefers-color-scheme: dark)').matches ? 'noche' : 'dia';
+        }
+        document.documentElement.dataset.tema = tema;
+        document.querySelector('meta[name="theme-color"]').content = tema === 'noche' ? '#0b0a14' : '#f6f5fa';
+      })();
+    </script>
   </head>
   <body>
-    <main class="app entrar" id="pantalla-entrar">
-      <div class="marca">
-        <img src="/icono.svg" alt="" width="96" height="96" />
-        <h1>Coach Ontológico</h1>
-        <p>Tu coach por voz. Entra con tu cuenta de Google y sigue donde lo dejaste, en la PC o en el móvil.</p>
+    <div class="fondo" aria-hidden="true">
+      <span class="aurora aurora-1"></span>
+      <span class="aurora aurora-2"></span>
+      <span class="aurora aurora-3"></span>
+      <span class="grano"></span>
+    </div>
+
+    <!-- Pantalla de entrada -->
+    <main class="entrar" id="pantalla-entrar">
+      <button type="button" class="boton-tema" aria-label="Cambiar entre modo día y modo noche" title="Modo día / noche">
+        <svg class="icono-luna" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+        <svg class="icono-sol" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0-5 1.5 3h-3L12 2zm0 20-1.5-3h3L12 22zM2 12l3-1.5v3L2 12zm20 0-3 1.5v-3l3 1.5zM4.9 4.9l3.2 1.1-2.1 2.1-1.1-3.2zm14.2 14.2-3.2-1.1 2.1-2.1 1.1 3.2zM4.9 19.1 6 15.9 8.1 18l-3.2 1.1zM19.1 4.9 18 8.1 15.9 6l3.2-1.1z"/></svg>
+      </button>
+      <div class="entrar-orbe">
+        <canvas id="orbe-entrar" aria-hidden="true"></canvas>
       </div>
-      <button type="button" class="boton-google" id="boton-entrar">Entrar con Google</button>
+      <div class="entrar-texto">
+        <p class="sobretitulo">Coaching ontológico por voz</p>
+        <h1 class="titulo-marca">Coach Ontológico</h1>
+        <p class="bajada">
+          Lenguaje, emoción y cuerpo. Habla con tu coach y sigue donde lo dejaste, en la PC o en el móvil.
+        </p>
+      </div>
+      <button type="button" class="boton-google" id="boton-entrar">
+        <svg viewBox="0 0 48 48" width="20" height="20" aria-hidden="true">
+          <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/>
+          <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/>
+          <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/>
+          <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/>
+        </svg>
+        Entrar con Google
+      </button>
       <p class="error" id="error-entrar" role="alert" hidden></p>
     </main>
 
-    <main class="app" id="pantalla-coach" hidden>
-      <header class="cabecera">
-        <div>
-          <p class="etiqueta" id="etiqueta-nivel">Nivel 1 de 3</p>
-          <h1 id="nombre-nivel">El Observador Inicial</h1>
+    <!-- Pantalla del coach -->
+    <div class="coach" id="pantalla-coach" hidden>
+      <header class="barra">
+        <div class="marca-mini">
+          <img src="/icono.svg" alt="" width="28" height="28" />
+          <span>Coach Ontológico</span>
         </div>
-        <ol class="progreso" id="progreso" aria-label="Progreso del programa">
-          <li data-nivel="1"></li>
-          <li data-nivel="2"></li>
-          <li data-nivel="3"></li>
-        </ol>
+        <div class="usuario">
+          <span id="cuenta" class="usuario-correo"></span>
+          <button type="button" class="boton-tema" aria-label="Cambiar entre modo día y modo noche" title="Modo día / noche">
+            <svg class="icono-luna" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+            <svg class="icono-sol" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0-5 1.5 3h-3L12 2zm0 20-1.5-3h3L12 22zM2 12l3-1.5v3L2 12zm20 0-3 1.5v-3l3 1.5zM4.9 4.9l3.2 1.1-2.1 2.1-1.1-3.2zm14.2 14.2-3.2-1.1 2.1-2.1 1.1 3.2zM4.9 19.1 6 15.9 8.1 18l-3.2 1.1zM19.1 4.9 18 8.1 15.9 6l3.2-1.1z"/></svg>
+          </button>
+
+          <button type="button" id="boton-salir" class="boton-fantasma">Salir</button>
+        </div>
       </header>
 
-      <section class="centro">
-        <button class="orbe" id="boton-principal" type="button" aria-live="polite">
-          <span class="orbe-texto" id="texto-boton">Empezar sesión</span>
-        </button>
-        <p class="estado" id="estado" role="status">Toca para hablar con tu coach</p>
-        <video id="vista-camara" class="vista-camara" playsinline muted hidden></video>
-      </section>
+      <aside class="camino" aria-labelledby="titulo-camino">
+        <h2 id="titulo-camino" class="titulo-panel">Tu camino</h2>
+        <ol class="niveles" id="niveles">
+          <li data-nivel="1">
+            <span class="nivel-marca">1</span>
+            <div>
+              <p class="nivel-nombre">El Observador Inicial</p>
+              <p class="nivel-desc">Hechos vs. juicios: descubre cómo interpretas la realidad.</p>
+            </div>
+          </li>
+          <li data-nivel="2">
+            <span class="nivel-marca">2</span>
+            <div>
+              <p class="nivel-nombre">El Diseñador de Realidades</p>
+              <p class="nivel-desc">Hablar es actuar: declaraciones que abren posibilidades.</p>
+            </div>
+          </li>
+          <li data-nivel="3">
+            <span class="nivel-marca">3</span>
+            <div>
+              <p class="nivel-nombre">El Maestro de la Coherencia Corporal</p>
+              <p class="nivel-desc">Lenguaje, emoción y cuerpo alineados.</p>
+            </div>
+          </li>
+        </ol>
 
-      <section class="subtitulos" id="subtitulos" aria-label="Transcripción" aria-live="polite" hidden></section>
+        <section class="tarjeta" id="tarjeta-sesion" hidden>
+          <h3>Última sesión <span id="fecha-sesion" class="tenue"></span></h3>
+          <p id="ultima-sesion"></p>
+        </section>
+        <section class="tarjeta" id="tarjeta-feedback" hidden>
+          <h3>Última evaluación <span id="puntaje-feedback" class="puntaje"></span></h3>
+          <p id="ultimo-feedback"></p>
+        </section>
 
-      <nav class="controles" id="controles" hidden>
-        <button type="button" id="boton-silencio" class="control" aria-pressed="false">Silenciar micrófono</button>
-        <button type="button" id="boton-camara" class="control" aria-pressed="false">Activar cámara</button>
-        <button type="button" id="boton-subtitulos" class="control" aria-pressed="false">Ver texto</button>
-      </nav>
+        <button type="button" id="boton-reiniciar" class="enlace">Reiniciar programa</button>
+      </aside>
 
-      <footer class="pie">
-        <p id="ultimo-feedback" class="feedback" hidden></p>
-        <p class="cuenta">
-          <span id="cuenta"></span> ·
-          <button type="button" id="boton-salir" class="enlace">Cerrar sesión</button> ·
-          <button type="button" id="boton-reiniciar" class="enlace">Reiniciar programa</button>
-        </p>
-      </footer>
-    </main>
+      <main class="escenario">
+        <div class="encabezado-nivel">
+          <p class="sobretitulo" id="etiqueta-nivel">Nivel 1 de 3</p>
+          <h1 class="titulo-nivel" id="nombre-nivel">El Observador Inicial</h1>
+        </div>
+
+        <div class="orbe-zona">
+          <canvas id="orbe-coach" aria-hidden="true"></canvas>
+          <button class="orbe" id="boton-principal" type="button">
+            <span class="orbe-texto" id="texto-boton">Empezar sesión</span>
+          </button>
+          <video id="vista-camara" class="vista-camara" playsinline muted hidden></video>
+        </div>
+
+        <p class="estado" id="estado" role="status">Toca el orbe para hablar con tu coach</p>
+
+        <nav class="controles" id="controles" hidden>
+          <button type="button" id="boton-silencio" class="control" aria-pressed="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12h-2z"/></svg>
+            <span>Silenciar</span>
+          </button>
+          <button type="button" id="boton-camara" class="control" aria-pressed="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+            <span>Cámara</span>
+          </button>
+          <button type="button" id="boton-subtitulos" class="control" aria-pressed="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zM6 10h2v2H6v-2zm0 4h8v2H6v-2zm10 2h-2v-2h2v2zm2-4h-8v-2h8v2z"/></svg>
+            <span>Texto</span>
+          </button>
+        </nav>
+
+        <section class="subtitulos" id="subtitulos" aria-label="Transcripción" aria-live="polite" hidden></section>
+      </main>
+    </div>
 
     <script type="module" src="./main.js"></script>
   </body>
