@@ -1,6 +1,6 @@
 // Service worker mínimo: permite instalar la app y abrirla aunque la red falle
 // un momento. Nunca intercepta las rutas internas de Firebase (/__/).
-const CACHE = 'coach-v2';
+const CACHE = 'coach-v3';
 
 self.addEventListener('install', () => self.skipWaiting());
 
@@ -17,7 +17,7 @@ self.addEventListener('fetch', (evento) => {
 
   // Primero la red (siempre la versión más nueva); si no hay, lo guardado.
   evento.respondWith(
-    fetch(evento.request)
+    fetch(evento.request, { cache: 'no-cache' })
       .then((respuesta) => {
         const copia = respuesta.clone();
         caches.open(CACHE).then((cache) => cache.put(evento.request, copia));
