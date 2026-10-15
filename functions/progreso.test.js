@@ -94,7 +94,7 @@ test('práctica libre: instrucciones y herramientas propias', async () => {
   assert.match(practica.systemInstruction, /práctica libre/);
   assert.match(practica.systemInstruction, /«Poner un límite a mi hermano»/);
   const nombres = practica.tools[0].functionDeclarations.map((f) => f.name);
-  assert.deepEqual(nombres, ['asignar_tarea', 'guardar_resumen_sesion']);
+  assert.deepEqual(nombres, ['asignar_tarea', 'dejar_frase', 'guardar_resumen_sesion']);
   const programa = configuracionLive(progresoInicial());
   assert.ok(programa.tools[0].functionDeclarations.some((f) => f.name === 'registrar_evaluacion'));
 });
@@ -182,4 +182,20 @@ test('diálogo afectivo activado y pautas de humor e ironía', async () => {
   const { configuracionLive, instruccionesSistema } = await import('./coach.js');
   assert.equal(configuracionLive(progresoInicial()).enableAffectiveDialog, true);
   assert.match(instruccionesSistema(progresoInicial()), /noto algo de ironía/);
+});
+
+test('"algo para llevarte": se guarda, se retoma y llega en el recordatorio', async () => {
+  const { aplicarFrase, aplicarTarea, aplicarReflexion } = await import('./progreso.js');
+  const { instruccionesSistema } = await import('./coach.js');
+  const { mensajeRecordatorio } = await import('./recordatorios.js');
+  let p = aplicarFrase(progresoInicial(), '  Mantén la postura erguida:   tu cuerpo también habla. ').progreso;
+  assert.equal(p.frases[0].texto, 'Mantén la postura erguida: tu cuerpo también habla.');
+  assert.match(instruccionesSistema(p), /«Mantén la postura erguida/);
+  assert.deepEqual(mensajeRecordatorio(p), { titulo: 'Para llevarte, de Sofía', cuerpo: 'Mantén la postura erguida: tu cuerpo también habla.' });
+  // Una tarea pendiente tiene prioridad en el recordatorio; ya reflexionada, vuelve la frase.
+  p = aplicarTarea(p, 'Anota tres juicios.').progreso;
+  assert.match(mensajeRecordatorio(p).titulo, /tarea/);
+  p = aplicarReflexion(p, p.tareas[0].id, 'Hecho.').progreso;
+  assert.match(mensajeRecordatorio(p).titulo, /Para llevarte/);
+  assert.equal(aplicarFrase(p, '   ').cambio, false);
 });

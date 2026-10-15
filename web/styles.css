@@ -1180,6 +1180,16 @@ button {
   color: var(--texto-suave);
 }
 
+.tarjeta-frase blockquote {
+  margin: 4px 0 0;
+  padding-left: 12px;
+  border-left: 3px solid var(--violeta);
+  font-family: var(--fuente-titulo);
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
 .tarjeta-tarea {
   border-color: var(--actual-borde);
 }

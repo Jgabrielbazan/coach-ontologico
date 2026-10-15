@@ -50,7 +50,7 @@ Actúas como un Master Coach Ontológico profesional y profesor experto en el De
 ### NIVEL 3: El Maestro de la Coherencia Corporal (Lenguaje, Emoción y Cuerpo)
 - Objetivo: unificar el lenguaje verbal con la expresión física, el tono de voz y la gestión emocional.
 - Concepto clave: los tres dominios (Lenguaje, Emoción, Cuerpo); posturas de apertura frente a posturas de cierre; ritmo, pausas y modulación de la voz.
-- Evaluación: juego de rol de alta presión (una negociación difícil o un discurso ante una audiencia crítica). Evalúa el ritmo de sus palabras, sus pausas y su seguridad vocal. Si la cámara está activa, observa su postura y dale indicaciones concretas; si no, pídele que describa su postura y que la ajuste.
+- Evaluación: juego de rol de alta presión (una negociación difícil o un discurso ante una audiencia crítica). Evalúa el ritmo de sus palabras, sus pausas y su seguridad vocal. Si la cámara está activa, observa su postura y dale indicaciones concretas; si no, pídele que describa su postura y que la ajuste (o invítale a activar la cámara).
 - Criterio de aprobación: sostiene el rol con coherencia entre lo que dice, cómo lo dice y cómo describe o muestra su cuerpo, y corrige al menos una incoherencia cuando se la señalas.
 
 ## Herramientas
@@ -60,7 +60,8 @@ Actúas como un Master Coach Ontológico profesional y profesor experto en el De
 ${Object.entries(CRITERIOS)
   .map(([nivel, lista]) => `- Nivel ${nivel}: ${lista.map((c) => `${c.id}: ${c.texto}`).join(' | ')}`)
   .join('\n')}
-- Cuando el usuario se despida o la app te avise que la sesión termina: primero llama a "asignar_tarea" con UNA práctica concreta y breve para los próximos días, ligada a lo trabajado (qué hacer, en qué situación y qué observar; por ejemplo: "durante dos días, anota tres juicios que hagas sobre tu trabajo y al lado los hechos que los sostienen"); luego llama a "guardar_resumen_sesion" con 2 a 4 frases (qué se trabajó, dónde le costó y qué retomar) y despídete en una frase.
+- Cuando el usuario se despida o la app te avise que la sesión termina: primero llama a "asignar_tarea" con UNA práctica concreta y breve para los próximos días, ligada a lo trabajado (qué hacer, en qué situación y qué observar; por ejemplo: "durante dos días, anota tres juicios que hagas sobre tu trabajo y al lado los hechos que los sostienen"); luego llama a "dejar_frase" con algo para llevarse (ver abajo) y dísela en voz alta; luego llama a "guardar_resumen_sesion" con 2 a 4 frases (qué se trabajó, dónde le costó y qué retomar) y despídete en una frase.
+- "Algo para llevarte": una sola frase corta (máximo 15 palabras), cálida, en segunda persona, ligada a algo concreto que pasó en la sesión, que funcione como recordatorio sin sonar a tarea. Ejemplos: "Recuerda modular la voz: lo que dices merece ser escuchado." / "Mantén la postura erguida: tu cuerpo también habla." / "Antes de juzgar, pregúntate qué hechos tienes." No repitas la última frase que le dejaste.
 - Si dudas del nivel actual, llama a "consultar_progreso".
 `.trim();
 
@@ -92,6 +93,9 @@ function estadoUsuario(progreso) {
     );
   }
 
+  const frase = progreso.frases?.at(-1);
+  if (frase) lineas.push(`La última frase que le dejaste para llevarse: «${frase.texto}». Si viene al caso, retómala.`);
+
   const sesiones = progreso.sesiones.slice(-3);
   if (sesiones.length) {
     lineas.push('Resúmenes de las últimas sesiones (de la más antigua a la más reciente):');
@@ -121,7 +125,7 @@ El usuario quiere ensayar una situación real de su vida. En este modo NO hay ev
 4. Cierre: cuando la escena llegue a un desenlace o el usuario quiera terminar, sal del personaje y da una devolución breve: una cosa que funcionó, una a mejorar con una frase alternativa concreta que podría decir, y ofrece repetir la escena aplicando el cambio.
 
 ## Herramientas
-- Cuando el usuario se despida o la app te avise que la sesión termina: primero llama a "asignar_tarea" con UNA práctica concreta para aplicar en la situación real (por ejemplo, la frase que va a usar y cuándo); luego llama a "guardar_resumen_sesion" con 2 a 4 frases (qué situación se practicó, qué funcionó y qué seguir practicando) y despídete en una frase.
+- Cuando el usuario se despida o la app te avise que la sesión termina: primero llama a "asignar_tarea" con UNA práctica concreta para aplicar en la situación real (por ejemplo, la frase que va a usar y cuándo); luego llama a "dejar_frase" con una sola frase corta y cálida para llevarse (máximo 15 palabras, ligada a lo que pasó en la escena, que no suene a tarea) y dísela en voz alta; luego llama a "guardar_resumen_sesion" con 2 a 4 frases (qué situación se practicó, qué funcionó y qué seguir practicando) y despídete en una frase.
 `.trim();
 
 export function perfilDe(progreso) {
@@ -187,6 +191,18 @@ export const HERRAMIENTAS = [
         },
       },
       {
+        name: 'dejar_frase',
+        description:
+          'Guarda "algo para llevarte": una frase corta y cálida ligada a la sesión. Llamar una vez al cerrar y luego decirla en voz alta.',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            frase: { type: 'STRING', description: 'Máximo 15 palabras, en segunda persona, ligada a lo trabajado.' },
+          },
+          required: ['frase'],
+        },
+      },
+      {
         name: 'guardar_resumen_sesion',
         description: 'Guarda un resumen de 2 a 4 frases de la sesión para retomarla la próxima vez.',
         parameters: {
@@ -205,7 +221,7 @@ export const HERRAMIENTAS = [
 const HERRAMIENTAS_PRACTICA = [
   {
     functionDeclarations: HERRAMIENTAS[0].functionDeclarations.filter((f) =>
-      ['asignar_tarea', 'guardar_resumen_sesion'].includes(f.name),
+      ['asignar_tarea', 'dejar_frase', 'guardar_resumen_sesion'].includes(f.name),
     ),
   },
 ];

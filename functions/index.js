@@ -15,6 +15,7 @@ import {
 import {
   aplicarCoach,
   aplicarEvaluacion,
+  aplicarFrase,
   aplicarReinicio,
   aplicarReflexion,
   aplicarResumen,
@@ -156,6 +157,12 @@ export const registrarUso = onCall(async (request) => {
 export const asignarTarea = onCall(async (request) => {
   const uid = usuarioAutorizado(request);
   const { mensaje } = await actualizarProgreso(uid, (p) => aplicarTarea(p, request.data?.tarea));
+  return { mensaje };
+});
+
+export const dejarFrase = onCall(async (request) => {
+  const uid = usuarioAutorizado(request);
+  const { mensaje } = await actualizarProgreso(uid, (p) => aplicarFrase(p, request.data?.frase));
   return { mensaje };
 });
 

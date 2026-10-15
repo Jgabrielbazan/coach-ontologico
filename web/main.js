@@ -13,6 +13,9 @@ const ui = {
   estado: $('estado'),
   video: $('vista-camara'),
   subtitulos: $('subtitulos'),
+  tarjetaFrase: $('tarjeta-frase'),
+  textoFrase: $('texto-frase'),
+  fechaFrase: $('fecha-frase'),
   activarRecordatorio: $('activar-recordatorio'),
   horaRecordatorio: $('hora-recordatorio'),
   probarRecordatorio: $('probar-recordatorio'),
@@ -70,14 +73,23 @@ const NIVELES = {
   2: 'El Diseñador de Realidades',
   3: 'El Maestro de la Coherencia Corporal',
 };
-const PROGRESO_INICIAL = { nivel: 1, programaCompleto: false, evaluaciones: [], sesiones: [], tareas: [], coach: 'femenino' };
+const PROGRESO_INICIAL = {
+  nivel: 1,
+  programaCompleto: false,
+  evaluaciones: [],
+  sesiones: [],
+  tareas: [],
+  frases: [],
+  coach: 'femenino',
+};
 
 const TEXTO_INICIO = {
   programa: '[Inicio de sesión: saluda en una frase y continúa el programa donde corresponde.]',
   practica: '[Inicio de práctica libre: saluda en una frase y empieza con tus preguntas de contexto sobre la situación.]',
 };
 const TEXTO_CIERRE =
-  '[La sesión termina ahora: llama a asignar_tarea, luego a guardar_resumen_sesion, y despídete en una frase.]';
+  '[La sesión termina ahora: llama a asignar_tarea, luego a dejar_frase y dísela en voz alta, ' +
+  'luego a guardar_resumen_sesion, y despídete en una frase.]';
 const MAX_REINTENTOS = 3;
 
 const reproductor = new Reproductor(() => actualizarEstado());
@@ -177,6 +189,13 @@ function mostrarProgreso(datos) {
         return item;
       }),
   );
+
+  const frase = p.frases.at(-1);
+  ui.tarjetaFrase.hidden = !frase;
+  if (frase) {
+    ui.textoFrase.textContent = frase.texto;
+    ui.fechaFrase.textContent = fechaCorta.format(new Date(frase.fecha));
+  }
 
   const tarea = p.tareas.at(-1);
   ui.tarjetaTarea.hidden = !tarea;
@@ -363,6 +382,10 @@ async function ejecutarHerramienta({ name, args = {} }) {
     }
     case 'asignar_tarea': {
       const { mensaje } = await llamar('asignarTarea', { tarea: args.tarea });
+      return { resultado: mensaje };
+    }
+    case 'dejar_frase': {
+      const { mensaje } = await llamar('dejarFrase', { frase: args.frase });
       return { resultado: mensaje };
     }
     case 'guardar_resumen_sesion': {
@@ -687,7 +710,8 @@ async function terminar() {
   const resumenGuardado = new Promise((r) => (avisarResumenGuardado = r));
   sesion.sendClientContent({ turns: [{ role: 'user', parts: [{ text: TEXTO_CIERRE }] }], turnComplete: true });
 
-  await Promise.race([resumenGuardado, esperar(10000)]);
+  // El cierre incluye tarea, frase dicha en voz alta y resumen: le damos tiempo.
+  await Promise.race([resumenGuardado, esperar(20000)]);
   // Deja que termine la despedida, con un límite.
   for (let i = 0; i < 40 && (reproductor.hablando || i < 6); i++) await esperar(250);
   finalizar('Sesión guardada. ¡Hasta la próxima!');
@@ -885,9 +909,18 @@ ui.silencio.addEventListener('click', () => {
   actualizarEstado();
 });
 
+/** Le cuenta al coach que la cámara se prendió o apagó, sin interrumpir lo que está diciendo. */
+function avisarCamara(activa) {
+  const texto = activa
+    ? '[La cámara está activada: ahora puedes verme. Úsala como señal, con tacto.]'
+    : '[La cámara se apagó: ya no puedes verme.]';
+  sesion?.sendClientContent({ turns: [{ role: 'user', parts: [{ text: texto }] }], turnComplete: false });
+}
+
 ui.camara.addEventListener('click', async () => {
   if (camara) {
     apagarCamara();
+    avisarCamara(false);
     return;
   }
   camara = new Camara(ui.video, (datos) =>
@@ -898,6 +931,7 @@ ui.camara.addEventListener('click', async () => {
     await camara.iniciar();
     ui.camara.setAttribute('aria-pressed', 'true');
     ponerTexto(ui.camara, 'Apagar cámara');
+    avisarCamara(true);
   } catch (err) {
     apagarCamara();
     actualizarEstado(err.name === 'NotAllowedError' ? 'Necesito permiso para usar la cámara.' : err.message);

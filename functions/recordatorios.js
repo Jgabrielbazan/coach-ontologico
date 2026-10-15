@@ -66,6 +66,8 @@ export function mensajeRecordatorio(datos) {
   if (tarea && !tarea.reflexion) {
     return { titulo: `${nombre}: ¿cómo vas con tu tarea?`, cuerpo: recortar(tarea.texto, 140) };
   }
+  const frase = p.frases.at(-1);
+  if (frase) return { titulo: `Para llevarte, de ${nombre}`, cuerpo: recortar(frase.texto, 140) };
   if (p.programaCompleto) {
     return { titulo: `${nombre} te espera`, cuerpo: 'Unos minutos de práctica libre hoy: ¿qué conversación tienes pendiente?' };
   }

@@ -7,6 +7,7 @@ export const PUNTUACION_MINIMA = 70;
 const MAX_SESIONES_GUARDADAS = 50;
 const MAX_EVALUACIONES_GUARDADAS = 100;
 const MAX_TAREAS_GUARDADAS = 30;
+const MAX_FRASES_GUARDADAS = 30;
 
 export const COACHES = ['femenino', 'masculino'];
 
@@ -30,7 +31,7 @@ export const CRITERIOS = {
 };
 
 export function progresoInicial() {
-  return { nivel: 1, programaCompleto: false, evaluaciones: [], sesiones: [], tareas: [], coach: 'femenino' };
+  return { nivel: 1, programaCompleto: false, evaluaciones: [], sesiones: [], tareas: [], frases: [], coach: 'femenino' };
 }
 
 export function normalizar(datos) {
@@ -143,6 +144,16 @@ export function aplicarTarea(actual, texto) {
   });
   progreso.tareas = progreso.tareas.slice(-MAX_TAREAS_GUARDADAS);
   return { progreso, cambio: true, mensaje: 'Tarea guardada: el usuario la verá en la app.' };
+}
+
+/** "Algo para llevarte": la frase con que el coach cierra la sesión. */
+export function aplicarFrase(actual, texto) {
+  const progreso = structuredClone(normalizar(actual));
+  const frase = String(texto ?? '').replace(/\s+/g, ' ').trim().slice(0, 200);
+  if (!frase) return { progreso, cambio: false, mensaje: 'Frase vacía: no se guardó.' };
+  progreso.frases.push({ texto: frase, fecha: new Date().toISOString() });
+  progreso.frases = progreso.frases.slice(-MAX_FRASES_GUARDADAS);
+  return { progreso, cambio: true, mensaje: 'Frase guardada. Ahora dísela en voz alta como cierre, con calidez.' };
 }
 
 /** El usuario anota cómo le fue con una tarea. */
