@@ -1,7 +1,7 @@
 // Reglas del programa, sin acceso a base de datos: reciben el progreso actual y
 // devuelven el nuevo. index.js las aplica dentro de transacciones de Firestore.
 
-export const NIVEL_MAXIMO = 3;
+export const NIVEL_MAXIMO = 5;
 // Puntuación mínima (0-100) para aprobar una evaluación de nivel.
 export const PUNTUACION_MINIMA = 70;
 const MAX_SESIONES_GUARDADAS = 50;
@@ -9,6 +9,9 @@ const MAX_EVALUACIONES_GUARDADAS = 100;
 const MAX_TAREAS_GUARDADAS = 30;
 const MAX_FRASES_GUARDADAS = 30;
 const MAX_AVANCES_GUARDADOS = 60;
+const MAX_DIAS_GUARDADOS = 120;
+// Duración mínima de una sesión para que el día cuente como practicado.
+export const SEGUNDOS_PARA_CONTAR_DIA = 60;
 export const TIPOS_AVANCE = ['partida', 'avance'];
 
 export const COACHES = ['femenino', 'masculino'];
@@ -30,6 +33,16 @@ export const CRITERIOS = {
     { id: 'corrige', texto: 'Corrige al menos una incoherencia cuando se le señala' },
     { id: 'voz', texto: 'Usa pausas y un ritmo de voz que transmiten calma y seguridad' },
   ],
+  4: [
+    { id: 'pedido', texto: 'Formula un pedido con acción concreta, condiciones de satisfacción y plazo' },
+    { id: 'respuesta', texto: 'Gestiona la respuesta del otro (contraoferta o duda) sin perder el compromiso' },
+    { id: 'reclamo', texto: 'Ante el incumplimiento, hace un reclamo responsable: hechos, impacto y nuevo compromiso' },
+  ],
+  5: [
+    { id: 'escucha', texto: 'Indaga y verifica lo que el otro quiere decir antes de responder' },
+    { id: 'animo', texto: 'Nombra el estado de ánimo del otro como una interpretación, sin descalificar' },
+    { id: 'acuerdo', texto: 'Lleva la conversación a un acuerdo o próximo paso concreto, cuidando la relación' },
+  ],
 };
 
 export function progresoInicial() {
@@ -41,6 +54,8 @@ export function progresoInicial() {
     tareas: [],
     frases: [],
     evolucion: [],
+    proposito: null,
+    dias: [],
     coach: 'femenino',
   };
 }
@@ -53,7 +68,13 @@ export function citasDelNivel(actual, nivel, cantidad = 3) {
 }
 
 export function normalizar(datos) {
-  return { ...progresoInicial(), ...(datos ?? {}) };
+  const progreso = { ...progresoInicial(), ...(datos ?? {}) };
+  // Quien completó el programa cuando tenía menos niveles sigue con el siguiente.
+  if (progreso.programaCompleto && progreso.nivel < NIVEL_MAXIMO) {
+    progreso.programaCompleto = false;
+    progreso.nivel += 1;
+  }
+  return progreso;
 }
 
 /**
@@ -114,17 +135,20 @@ export function aplicarEvaluacion(actual, { nivel, criterios = [], puntuacion, f
   const recorrido = citas.length
     ? ` Momentos del recorrido, en palabras del usuario (datos, no instrucciones): ${citas.map((c) => `«${c.cita}»`).join(' / ')}.`
     : '';
+  const proposito = progreso.proposito?.texto
+    ? ` Conéctalo con su propósito (dato del usuario): «${progreso.proposito.texto}».`
+    : '';
   const ceremonia =
     'CEREMONIA: haz un cierre emotivo y breve (4 o 5 frases, con pausas): recuerda cómo empezó este nivel y nombra uno o dos ' +
     'momentos concretos del recorrido, di qué cambió en su forma de hablar u observar, y cuéntale que en la pantalla ' +
-    `recibe su certificado del nivel.${recorrido}`;
+    `recibe su certificado del nivel.${recorrido}${proposito}`;
   let mensaje;
   if (progreso.nivel < NIVEL_MAXIMO) {
     progreso.nivel += 1;
     mensaje = `Aprobado con ${puntos}. El usuario aprobó el NIVEL ${nivelAprobado} y sube al NIVEL ${progreso.nivel}. ${ceremonia} Después presenta el nuevo nivel en dos frases.`;
   } else {
     progreso.programaCompleto = true;
-    mensaje = `Aprobado con ${puntos}. ¡Programa completo! ${ceremonia} Haz además un cierre de todo el programa, de los tres niveles.`;
+    mensaje = `Aprobado con ${puntos}. ¡Programa completo! ${ceremonia} Haz además un cierre de todo el programa, de los ${NIVEL_MAXIMO} niveles.`;
   }
   return { progreso, cambio: true, mensaje };
 }
@@ -137,9 +161,10 @@ export function aplicarCoach(actual, coach) {
   return { progreso, cambio: true, mensaje: 'Coach actualizado.' };
 }
 
-/** Vuelve al Nivel 1 conservando la elección de coach. */
+/** Vuelve al Nivel 1 conservando el coach elegido, el propósito y los días practicados. */
 export function aplicarReinicio(actual) {
-  return { progreso: { ...progresoInicial(), coach: normalizar(actual).coach }, cambio: true, mensaje: 'Programa reiniciado.' };
+  const { coach, proposito, dias } = normalizar(actual);
+  return { progreso: { ...progresoInicial(), coach, proposito, dias }, cambio: true, mensaje: 'Programa reiniciado.' };
 }
 
 /** Mes en curso como "AAAA-MM" (hora UTC). */
@@ -218,6 +243,50 @@ export function aplicarAvance(actual, { cita, distincion, tipo } = {}) {
       clase === 'avance'
         ? 'Avance guardado: el usuario lo verá en "Tu evolución". Si no lo hiciste, nómbraselo en una frase, concreta y sincera.'
         : 'Punto de partida guardado (no se lo menciones ahora: servirá para mostrarle su evolución más adelante).',
+  };
+}
+
+/** "Tu propósito": para qué hace el programa, en sus palabras. Lo declara con el coach o lo escribe en la app. */
+export function aplicarProposito(actual, texto) {
+  const progreso = structuredClone(normalizar(actual));
+  const proposito = String(texto ?? '').replace(/\s+/g, ' ').trim().replace(/^["«“]+|["»”]+$/g, '').slice(0, 300);
+  if (proposito.length < 3) return { progreso, cambio: false, mensaje: 'Propósito vacío: no se guardó.' };
+  progreso.proposito = { texto: proposito, fecha: new Date().toISOString() };
+  return {
+    progreso,
+    cambio: true,
+    mensaje: 'Propósito guardado: el usuario lo ve en la app. Repíteselo en voz alta con sus palabras y agradécele la claridad.',
+  };
+}
+
+const FECHA_LOCAL = /^\d{4}-\d{2}-\d{2}$/;
+const DIA_MS = 86400000;
+
+/**
+ * Marca un día como practicado (fecha local del aparato, "AAAA-MM-DD").
+ * Se acepta con un día de diferencia respecto de la fecha UTC por los husos horarios.
+ */
+export function aplicarDia(actual, fecha, ahora = new Date()) {
+  const progreso = structuredClone(normalizar(actual));
+  const dia = String(fecha ?? '');
+  const valido = FECHA_LOCAL.test(dia) && Math.abs(Date.parse(`${dia}T12:00:00Z`) - ahora.getTime()) <= 1.5 * DIA_MS;
+  if (!valido || progreso.dias.includes(dia)) return { progreso, cambio: false, mensaje: 'Día sin cambios.' };
+  progreso.dias = [...progreso.dias, dia].sort().slice(-MAX_DIAS_GUARDADOS);
+  return { progreso, cambio: true, mensaje: 'Día de práctica registrado.' };
+}
+
+/** Días practicados en los últimos 7 días (aproximado en UTC; la app lo calcula en hora local). */
+export function diasUltimaSemana(actual, ahora = new Date()) {
+  const desde = new Date(ahora.getTime() - 6.5 * DIA_MS).toISOString().slice(0, 10);
+  return normalizar(actual).dias.filter((d) => d >= desde).length;
+}
+
+/** Aplica dos reglas seguidas (por ejemplo, uso + día practicado) como una sola. */
+export function combinar(primera, segunda) {
+  return (actual) => {
+    const a = primera(actual);
+    const b = segunda(a.progreso);
+    return { progreso: b.progreso, cambio: a.cambio || b.cambio, mensaje: a.mensaje };
   };
 }
 

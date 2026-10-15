@@ -15,17 +15,21 @@ import {
 import {
   aplicarAvance,
   aplicarCoach,
+  aplicarDia,
   aplicarEvaluacion,
   aplicarFrase,
+  aplicarProposito,
   aplicarReinicio,
   aplicarReflexion,
   aplicarResumen,
   aplicarTarea,
   aplicarUso,
+  combinar,
   limpiarSituacion,
   minutosDelMes,
   normalizar,
   progresoInicial,
+  SEGUNDOS_PARA_CONTAR_DIA,
 } from './progreso.js';
 
 initializeApp();
@@ -151,7 +155,19 @@ export const reiniciarProgreso = onCall(async (request) => {
 
 export const registrarUso = onCall(async (request) => {
   const uid = usuarioAutorizado(request);
-  const { mensaje } = await actualizarProgreso(uid, (p) => aplicarUso(p, request.data?.segundos));
+  const { segundos, fecha } = request.data ?? {};
+  // Una sesión de al menos un minuto cuenta como día practicado (fecha local del aparato).
+  const regla =
+    Number(segundos) >= SEGUNDOS_PARA_CONTAR_DIA
+      ? combinar((p) => aplicarUso(p, segundos), (p) => aplicarDia(p, fecha))
+      : (p) => aplicarUso(p, segundos);
+  const { mensaje } = await actualizarProgreso(uid, regla);
+  return { mensaje };
+});
+
+export const guardarProposito = onCall(async (request) => {
+  const uid = usuarioAutorizado(request);
+  const { mensaje } = await actualizarProgreso(uid, (p) => aplicarProposito(p, request.data?.proposito));
   return { mensaje };
 });
 
@@ -175,8 +191,12 @@ export const registrarAvance = onCall(async (request) => {
 
 export const registrarReflexion = onCall(async (request) => {
   const uid = usuarioAutorizado(request);
-  const { id, reflexion } = request.data ?? {};
-  const { mensaje } = await actualizarProgreso(uid, (p) => aplicarReflexion(p, id, reflexion));
+  const { id, reflexion, fecha } = request.data ?? {};
+  // Anotar cómo te fue con la tarea también es practicar.
+  const { mensaje } = await actualizarProgreso(uid, (p) => {
+    const anotada = aplicarReflexion(p, id, reflexion);
+    return anotada.cambio ? combinar(() => anotada, (q) => aplicarDia(q, fecha))(p) : anotada;
+  });
   return { mensaje };
 });
 

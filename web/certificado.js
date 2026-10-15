@@ -101,8 +101,8 @@ function fondo(ctx) {
 
 /**
  * @param {HTMLCanvasElement} lienzo
- * @param {{ nivel: number, nombreNivel: string, completo: boolean, nombre: string, fecha: string,
- *   puntuacion: number, citas: string[], logros: string[], coach: string }} datos
+ * @param {{ nivel: number, nombreNivel: string, completo: boolean, totalNiveles: number, nombre: string,
+ *   fecha: string, puntuacion: number, citas: string[], logros: string[], coach: string, proposito: string }} datos
  */
 export async function dibujarCertificado(lienzo, datos) {
   await Promise.all(
@@ -159,12 +159,23 @@ export async function dibujarCertificado(lienzo, datos) {
   ctx.font = '400 26px Inter, system-ui, sans-serif';
   ctx.fillStyle = suave;
   const motivo = datos.completo
-    ? `por completar los tres niveles del programa de coaching ontológico, con la evaluación final aprobada el ${fechaLarga.format(new Date(datos.fecha))} (${datos.puntuacion}/100).`
+    ? `por completar los ${datos.totalNiveles} niveles del programa de coaching ontológico, con la evaluación final aprobada el ${fechaLarga.format(new Date(datos.fecha))} (${datos.puntuacion}/100).`
     : `por aprobar la evaluación del nivel el ${fechaLarga.format(new Date(datos.fecha))}, con ${datos.puntuacion}/100.`;
   let y = 605;
   for (const l of partir(ctx, motivo, 1100, 2)) {
     ctx.fillText(l, centro, y);
     y += 36;
+  }
+
+  // El para qué de todo el camino, si lo declaró.
+  if (datos.proposito) {
+    y += 6;
+    ctx.font = 'italic 400 23px Inter, system-ui, sans-serif';
+    ctx.fillStyle = '#6d28d9';
+    for (const l of partir(ctx, `Tu propósito: «${datos.proposito}»`, 1100, 2)) {
+      ctx.fillText(l, centro, y);
+      y += 32;
+    }
   }
 
   // Lo más personal: sus propias frases del recorrido; si no hay, los logros evaluados.

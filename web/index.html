@@ -146,6 +146,26 @@
           </details>
         </section>
 
+        <section class="tarjeta tarjeta-proposito" id="tarjeta-proposito">
+          <h3>Tu propósito <button type="button" class="enlace-mini" id="editar-proposito">Escribirlo</button></h3>
+          <blockquote id="texto-proposito" hidden></blockquote>
+          <p id="vacio-proposito" class="nota">¿Para qué haces este camino? Tu coach te ayudará a declararlo en la próxima sesión, o puedes escribirlo tú.</p>
+          <form id="formulario-proposito" class="reflexion" hidden>
+            <label for="campo-proposito">En primera persona y con tus palabras</label>
+            <textarea id="campo-proposito" rows="2" maxlength="300" placeholder="Ej.: Quiero dejar de evitar las conversaciones difíciles en el trabajo."></textarea>
+            <div class="fila-botones">
+              <button type="button" class="boton-fantasma" id="cancelar-proposito">Cancelar</button>
+              <button type="submit" class="boton-fantasma">Guardar</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="tarjeta tarjeta-semana" id="tarjeta-semana">
+          <h3>Tu semana <span id="cuenta-semana" class="puntaje"></span></h3>
+          <ol class="dias-semana" id="dias-semana" aria-label="Días practicados esta semana"></ol>
+          <p id="texto-semana" class="texto-uso"></p>
+        </section>
+
         <section class="tarjeta tarjeta-frase" id="tarjeta-frase" hidden>
           <h3>Para llevarte <span id="fecha-frase" class="tenue"></span></h3>
           <blockquote id="texto-frase"></blockquote>
@@ -206,6 +226,22 @@
               <button type="button" class="ver-certificado" data-nivel="3" hidden>Ver certificado</button>
             </div>
           </li>
+          <li data-nivel="4">
+            <span class="nivel-marca">4</span>
+            <div>
+              <p class="nivel-nombre">El Arquitecto de Compromisos</p>
+              <p class="nivel-desc">Pedidos, ofertas y promesas: coordinar acciones sin malentendidos.</p>
+              <button type="button" class="ver-certificado" data-nivel="4" hidden>Ver certificado</button>
+            </div>
+          </li>
+          <li data-nivel="5">
+            <span class="nivel-marca">5</span>
+            <div>
+              <p class="nivel-nombre">El Líder Conversacional</p>
+              <p class="nivel-desc">Escucha, estados de ánimo y conversaciones difíciles.</p>
+              <button type="button" class="ver-certificado" data-nivel="5" hidden>Ver certificado</button>
+            </div>
+          </li>
         </ol>
 
         <section class="tarjeta" id="tarjeta-sesion" hidden>
@@ -240,7 +276,7 @@
         </div>
 
         <div class="encabezado-nivel">
-          <p class="sobretitulo" id="etiqueta-nivel">Nivel 1 de 3</p>
+          <p class="sobretitulo" id="etiqueta-nivel">Nivel 1 de 5</p>
           <h1 class="titulo-nivel" id="nombre-nivel">El Observador Inicial</h1>
         </div>
 

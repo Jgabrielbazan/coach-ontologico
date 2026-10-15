@@ -12,13 +12,19 @@ en la PC y en el móvil, cada una por su cuenta. Entras con tu cuenta de Google 
 
 ## Qué incluye
 
-- **Programa de 3 niveles** con evaluaciones por criterios explícitos (✓/✗ con evidencia).
+- **Programa de 5 niveles** con evaluaciones por criterios explícitos (✓/✗ con evidencia):
+  1 Hechos vs. juicios · 2 Declaraciones · 3 Coherencia corporal · 4 Pedidos, ofertas y
+  promesas · 5 Escucha, estados de ánimo y conversaciones difíciles.
   Sube de nivel solo si se cumplen todos los criterios y la puntuación mínima.
 - **Práctica libre:** ensayas una situación real y el coach hace de la otra persona
   (di "pausa" para pedir una indicación).
 - **Coach con oficio:** contrato de sesión, preguntas poderosas, distinciones de la
   ontología del lenguaje. Dos perfiles: Sofía y Tomás.
 - **Tareas entre sesiones:** el coach deja una práctica, anotas cómo te fue y la retoma.
+- **Tu propósito:** el coach te ayuda a declarar para qué haces el programa (o lo escribes
+  tú); lo retoma en los momentos clave y aparece en tus certificados.
+- **Tu semana:** los días que practicaste (sesión de al menos 1 minuto o reflexión de la
+  tarea), con mensajes amables: nunca castiga los días sin práctica.
 - **Tu evolución:** el coach guarda frases tuyas textuales (punto de partida y avances) y
   la app muestra el "antes" frente al "ahora", con toda la línea de tiempo.
 - **Reconocimiento:** al empezar y al cerrar, el coach nombra un avance concreto que notó,

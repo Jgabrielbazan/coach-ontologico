@@ -1567,3 +1567,86 @@ button {
     transition: none;
   }
 }
+
+/* ---------- Tu propósito y Tu semana ---------- */
+
+.tarjeta-proposito blockquote {
+  margin: 4px 0 0;
+  padding-left: 12px;
+  border-left: 3px solid #d97706;
+  font-family: var(--fuente-titulo);
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.tarjeta-proposito blockquote::before {
+  content: '«';
+}
+
+.tarjeta-proposito blockquote::after {
+  content: '»';
+}
+
+.enlace-mini {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--violeta);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  cursor: pointer;
+}
+
+.enlace-mini:hover {
+  text-decoration: underline;
+}
+
+.fila-botones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.dias-semana {
+  list-style: none;
+  margin: 8px 0 6px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+
+.dias-semana li {
+  aspect-ratio: 1 / 1;
+  max-width: 36px;
+  width: 100%;
+  justify-self: center;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--borde);
+  background: var(--vidrio-fuerte);
+  color: var(--texto-suave);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.dias-semana li.hecho {
+  border-color: transparent;
+  background: linear-gradient(135deg, #7c5cf0, #0891b2);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgb(124 92 240 / 0.35);
+}
+
+.dias-semana li.hoy {
+  outline: 2px solid var(--violeta);
+  outline-offset: 2px;
+}
+
+.dias-semana li.futuro {
+  opacity: 0.45;
+}

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { CRITERIOS, aplicarEvaluacion, aplicarResumen, progresoInicial } from './progreso.js';
+import { CRITERIOS, aplicarEvaluacion, aplicarResumen, normalizar, progresoInicial } from './progreso.js';
 
 // "aprobado" = el coach marca todos los criterios del nivel como cumplidos.
 const evaluar = (progreso, nivel, aprobado, puntuacion) =>
@@ -29,12 +29,72 @@ test('ignora evaluaciones de otro nivel sin modificar nada', () => {
   assert.equal(r.progreso.evaluaciones.length, 0);
 });
 
-test('completa el programa tras aprobar el nivel 3', () => {
+test('completa el programa tras aprobar el nivel 5', () => {
   let p = progresoInicial();
-  for (const nivel of [1, 2, 3]) p = evaluar(p, nivel, true, 80).progreso;
-  assert.equal(p.nivel, 3);
+  for (const nivel of [1, 2, 3, 4]) p = evaluar(p, nivel, true, 80).progreso;
+  assert.equal(p.nivel, 5);
+  assert.equal(p.programaCompleto, false);
+  const final = evaluar(p, 5, true, 80);
+  assert.match(final.mensaje, /Programa completo!.*de los 5 niveles/s);
+  p = final.progreso;
+  assert.equal(p.nivel, 5);
   assert.equal(p.programaCompleto, true);
-  assert.equal(evaluar(p, 3, true, 90).cambio, false);
+  assert.equal(evaluar(p, 5, true, 90).cambio, false);
+});
+
+test('quien completó el programa de 3 niveles sigue con el nivel 4', () => {
+  const viejo = { nivel: 3, programaCompleto: true, evaluaciones: [] };
+  const p = normalizar(viejo);
+  assert.equal(p.nivel, 4);
+  assert.equal(p.programaCompleto, false);
+  assert.equal(evaluar(viejo, 4, true, 85).progreso.nivel, 5);
+});
+
+test('niveles 4 y 5: contenido, criterios y nombres', async () => {
+  const { instruccionesSistema, NIVELES } = await import('./coach.js');
+  const texto = instruccionesSistema({ ...progresoInicial(), nivel: 4 });
+  assert.match(texto, /NIVEL 4: El Arquitecto de Compromisos/);
+  assert.match(texto, /NIVEL 5: El Líder Conversacional/);
+  assert.match(texto, /Nivel actual: NIVEL 4 \(El Arquitecto de Compromisos\)/);
+  assert.match(texto, /Nivel 4: pedido: .* \| respuesta: .* \| reclamo: /);
+  assert.match(texto, /Nivel 5: escucha: .* \| animo: .* \| acuerdo: /);
+  assert.equal(NIVELES[5], 'El Líder Conversacional');
+  assert.equal(CRITERIOS[4].length, 3);
+});
+
+test('tu propósito: se declara, se limpia, lo usa el coach y sobrevive al reinicio', async () => {
+  const { aplicarProposito, aplicarReinicio, aplicarAvance } = await import('./progreso.js');
+  const { instruccionesSistema, instruccionesPractica, configuracionLive } = await import('./coach.js');
+  assert.match(instruccionesSistema(progresoInicial()), /Todavía no declaró su propósito/);
+  assert.doesNotMatch(instruccionesPractica(progresoInicial(), 'Pedir un aumento'), /Todavía no declaró/);
+  assert.equal(aplicarProposito(progresoInicial(), '  ').cambio, false);
+  let p = aplicarProposito(progresoInicial(), '  «Quiero dejar de evitar   las conversaciones difíciles» ').progreso;
+  assert.equal(p.proposito.texto, 'Quiero dejar de evitar las conversaciones difíciles');
+  assert.match(instruccionesSistema(p), /Su propósito .*«Quiero dejar de evitar las conversaciones difíciles»/);
+  assert.ok(configuracionLive(p).tools[0].functionDeclarations.some((f) => f.name === 'declarar_proposito'));
+  p = aplicarAvance(p, { cita: 'Te pido el informe el viernes.', tipo: 'avance' }).progreso;
+  assert.match(evaluar(p, 1, true, 90).mensaje, /Conéctalo con su propósito .*«Quiero dejar de evitar/);
+  assert.equal(aplicarReinicio(p).progreso.proposito.texto, 'Quiero dejar de evitar las conversaciones difíciles');
+});
+
+test('racha amable: días practicados, sin duplicados y con fechas razonables', async () => {
+  const { aplicarDia, diasUltimaSemana, aplicarReinicio } = await import('./progreso.js');
+  const { instruccionesSistema } = await import('./coach.js');
+  const ahora = new Date('2026-10-15T23:30:00Z');
+  let p = aplicarDia(progresoInicial(), '2026-10-15', ahora).progreso;
+  assert.equal(aplicarDia(p, '2026-10-15', ahora).cambio, false);
+  assert.equal(aplicarDia(p, '2026-10-01', ahora).cambio, false); // muy lejos de hoy
+  assert.equal(aplicarDia(p, 'ayer', ahora).cambio, false);
+  // El 16 local ya es posible en husos adelantados (UTC+14).
+  assert.equal(aplicarDia(p, '2026-10-16', ahora).cambio, true);
+  for (const d of ['2026-10-13', '2026-10-14']) p = aplicarDia(p, d, new Date(`${d}T15:00:00Z`)).progreso;
+  assert.deepEqual(p.dias, ['2026-10-13', '2026-10-14', '2026-10-15']);
+  assert.equal(diasUltimaSemana(p, ahora), 3);
+  assert.equal(diasUltimaSemana(p, new Date('2026-10-30T12:00:00Z')), 0);
+  assert.deepEqual(aplicarReinicio(p).progreso.dias, p.dias);
+  // El coach la reconoce con calidez y nunca reprocha.
+  const texto = instruccionesSistema(p);
+  assert.match(texto, /Nunca le reproches/);
 });
 
 test('no modifica el objeto recibido', () => {

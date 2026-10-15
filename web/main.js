@@ -87,6 +87,15 @@ const ui = {
   descargarCertificado: $('descargar-certificado'),
   compartirCertificado: $('compartir-certificado'),
   cerrarCertificado: $('cerrar-certificado'),
+  textoProposito: $('texto-proposito'),
+  vacioProposito: $('vacio-proposito'),
+  editarProposito: $('editar-proposito'),
+  formularioProposito: $('formulario-proposito'),
+  campoProposito: $('campo-proposito'),
+  cancelarProposito: $('cancelar-proposito'),
+  cuentaSemana: $('cuenta-semana'),
+  diasSemana: $('dias-semana'),
+  textoSemana: $('texto-semana'),
 };
 
 const NOMBRES_COACH = { femenino: 'Sofía', masculino: 'Tomás' };
@@ -95,7 +104,10 @@ const NIVELES = {
   1: 'El Observador Inicial',
   2: 'El Diseñador de Realidades',
   3: 'El Maestro de la Coherencia Corporal',
+  4: 'El Arquitecto de Compromisos',
+  5: 'El Líder Conversacional',
 };
+const NIVEL_MAXIMO = 5;
 const PROGRESO_INICIAL = {
   nivel: 1,
   programaCompleto: false,
@@ -104,6 +116,8 @@ const PROGRESO_INICIAL = {
   tareas: [],
   frases: [],
   evolucion: [],
+  proposito: null,
+  dias: [],
   coach: 'femenino',
 };
 
@@ -170,11 +184,13 @@ function ponerTexto(boton, texto) {
 
 function mostrarProgreso(datos) {
   const p = { ...PROGRESO_INICIAL, ...(datos ?? {}) };
+  // Quien completó el programa cuando tenía menos niveles sigue con el siguiente (igual que el servidor).
+  if (p.programaCompleto && p.nivel < NIVEL_MAXIMO) Object.assign(p, { programaCompleto: false, nivel: p.nivel + 1 });
   progresoActual = p;
   for (const opcion of ui.opcionesCoach) {
     opcion.setAttribute('aria-checked', String(opcion.dataset.coach === p.coach));
   }
-  ui.etiquetaNivel.textContent = p.programaCompleto ? 'Programa completo' : `Nivel ${p.nivel} de 3`;
+  ui.etiquetaNivel.textContent = p.programaCompleto ? 'Programa completo' : `Nivel ${p.nivel} de ${NIVEL_MAXIMO}`;
   ui.nombreNivel.textContent = p.programaCompleto ? 'Coherencia integrada' : NIVELES[p.nivel];
   actualizarEncabezado();
   for (const item of ui.niveles.children) {
@@ -220,6 +236,8 @@ function mostrarProgreso(datos) {
       }),
   );
 
+  mostrarProposito(p.proposito);
+  mostrarSemana(p.dias);
   mostrarEvolucion(p.evolucion);
   for (const boton of ui.botonesCertificado) {
     boton.hidden = !p.evaluaciones.some((e) => e.nivel === Number(boton.dataset.nivel) && e.aprobado);
@@ -256,6 +274,94 @@ function mostrarProgreso(datos) {
     ui.ultimaSesion.textContent = prefijo + sesion.resumen;
     ui.fechaSesion.textContent = fechaCorta.format(new Date(sesion.fecha));
   }
+}
+
+/** Fecha local del aparato como "AAAA-MM-DD" (para contar días practicados). */
+const hoyLocal = (fecha = new Date()) => fecha.toLocaleDateString('en-CA');
+
+// ---------- Tu propósito ----------
+
+function mostrarProposito(proposito) {
+  const texto = proposito?.texto ?? '';
+  const editando = !ui.formularioProposito.hidden;
+  ui.textoProposito.textContent = texto;
+  ui.textoProposito.hidden = !texto || editando;
+  ui.vacioProposito.hidden = Boolean(texto) || editando;
+  ui.editarProposito.textContent = texto ? 'Editar' : 'Escribirlo';
+  ui.editarProposito.hidden = editando;
+}
+
+function editarProposito(abrir) {
+  ui.formularioProposito.hidden = !abrir;
+  if (abrir) {
+    ui.campoProposito.value = progresoActual.proposito?.texto ?? '';
+    ui.campoProposito.focus();
+  }
+  mostrarProposito(progresoActual.proposito);
+}
+
+ui.editarProposito.addEventListener('click', () => editarProposito(true));
+ui.cancelarProposito.addEventListener('click', () => editarProposito(false));
+ui.formularioProposito.addEventListener('submit', async (evento) => {
+  evento.preventDefault();
+  const proposito = ui.campoProposito.value.trim();
+  if (proposito.length < 3) return;
+  const boton = ui.formularioProposito.querySelector('[type="submit"]');
+  boton.disabled = true;
+  try {
+    await llamar('guardarProposito', { proposito });
+    editarProposito(false);
+  } catch (err) {
+    actualizarEstado(`No pude guardar tu propósito: ${err.message}`);
+  } finally {
+    boton.disabled = false;
+  }
+});
+
+// ---------- Tu semana (racha amable) ----------
+
+/** Los 7 días de la semana en curso (de lunes a domingo) con los que practicaste. Nunca castiga. */
+function mostrarSemana(dias) {
+  const practicados = new Set(dias);
+  const hoy = hoyLocal();
+  const lunes = new Date();
+  lunes.setHours(12, 0, 0, 0);
+  lunes.setDate(lunes.getDate() - ((lunes.getDay() + 6) % 7));
+  const letras = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+  const nombres = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
+  let cuenta = 0;
+  ui.diasSemana.replaceChildren(
+    ...letras.map((letra, i) => {
+      const dia = new Date(lunes);
+      dia.setDate(lunes.getDate() + i);
+      const clave = hoyLocal(dia);
+      const hecho = practicados.has(clave);
+      if (hecho) cuenta++;
+      const item = document.createElement('li');
+      item.textContent = letra;
+      item.classList.toggle('hecho', hecho);
+      item.classList.toggle('hoy', clave === hoy);
+      item.classList.toggle('futuro', clave > hoy);
+      item.setAttribute('aria-label', `${nombres[i]}: ${hecho ? 'practicaste' : clave > hoy ? 'todavía no llega' : 'sin práctica'}`);
+      return item;
+    }),
+  );
+  ui.cuentaSemana.textContent = `${cuenta} de 7`;
+  const hoyHecho = practicados.has(hoy);
+  const animo =
+    cuenta === 0
+      ? 'Una sesión corta hoy ya cuenta.'
+      : cuenta === 1
+        ? hoyHecho
+          ? 'Buen comienzo: hoy ya sumaste.'
+          : 'Buen comienzo: cada día que practicas suma.'
+        : cuenta <= 3
+          ? 'Vas construyendo el hábito.'
+          : cuenta <= 5
+            ? 'Semana muy constante. ¡Bien!'
+            : '¡Semana excelente! Tu constancia se nota.';
+  const total = dias.length ? ` · ${dias.length} ${dias.length === 1 ? 'día practicado' : 'días practicados'} en total` : '';
+  ui.textoSemana.textContent = animo + total;
 }
 
 /** Tiempo entre dos fechas, en palabras: "5 días después", "3 semanas después". */
@@ -312,16 +418,18 @@ function detectarAprobacion(p) {
   const antes = nivelVisto;
   nivelVisto = { nivel: p.nivel, completo: p.programaCompleto };
   if (!antes) return; // primera carga: nada que celebrar
-  if (p.programaCompleto && !antes.completo) celebrarNivel(3);
+  if (p.programaCompleto && !antes.completo) celebrarNivel(NIVEL_MAXIMO);
   else if (p.nivel > antes.nivel) celebrarNivel(p.nivel - 1);
 }
 
 function celebrarNivel(nivel) {
   orbeCoach.celebrar();
   navigator.vibrate?.([60, 40, 140]);
-  ui.celebracionTitulo.textContent = nivel === 3 ? '¡Programa completo!' : `¡Nivel ${nivel} aprobado!`;
-  ui.celebracionBajada.textContent =
-    nivel === 3 ? 'Aprobaste los tres niveles. Tu certificado te espera.' : `${NIVELES[nivel]} · Tu certificado te espera.`;
+  const final = nivel === NIVEL_MAXIMO;
+  ui.celebracionTitulo.textContent = final ? '¡Programa completo!' : `¡Nivel ${nivel} aprobado!`;
+  ui.celebracionBajada.textContent = final
+    ? `Aprobaste los ${NIVEL_MAXIMO} niveles. Tu certificado te espera.`
+    : `${NIVELES[nivel]} · Tu certificado te espera.`;
   ui.celebracion.dataset.nivel = String(nivel);
   ui.celebracion.hidden = false;
 }
@@ -337,7 +445,9 @@ function datosCertificado(p, nivel) {
   return {
     nivel,
     nombreNivel: NIVELES[nivel],
-    completo: nivel === 3,
+    completo: nivel === NIVEL_MAXIMO,
+    totalNiveles: NIVEL_MAXIMO,
+    proposito: p.proposito?.texto ?? '',
     nombre: nombreUsuario,
     fecha: evaluacion.fecha,
     puntuacion: evaluacion.puntuacion,
@@ -438,7 +548,7 @@ function mostrarUso(p) {
 function actualizarEncabezado() {
   if (modo !== 'practica') {
     const p = progresoActual;
-    ui.etiquetaNivel.textContent = p.programaCompleto ? 'Programa completo' : `Nivel ${p.nivel} de 3`;
+    ui.etiquetaNivel.textContent = p.programaCompleto ? 'Programa completo' : `Nivel ${p.nivel} de ${NIVEL_MAXIMO}`;
     ui.nombreNivel.textContent = p.programaCompleto ? 'Coherencia integrada' : NIVELES[p.nivel];
     return;
   }
@@ -520,7 +630,7 @@ ui.formularioReflexion.addEventListener('submit', async (evento) => {
   const boton = ui.formularioReflexion.querySelector('button');
   boton.disabled = true;
   try {
-    await llamar('registrarReflexion', { id: ui.formularioReflexion.dataset.id, reflexion });
+    await llamar('registrarReflexion', { id: ui.formularioReflexion.dataset.id, reflexion, fecha: hoyLocal() });
     ui.campoReflexion.value = '';
   } catch (err) {
     actualizarEstado(`No pude guardar tu reflexión: ${err.message}`);
@@ -568,6 +678,10 @@ async function ejecutarHerramienta({ name, args = {} }) {
     }
     case 'dejar_frase': {
       const { mensaje } = await llamar('dejarFrase', { frase: args.frase });
+      return { resultado: mensaje };
+    }
+    case 'declarar_proposito': {
+      const { mensaje } = await llamar('guardarProposito', { proposito: args.proposito });
       return { resultado: mensaje };
     }
     case 'registrar_avance': {
@@ -800,7 +914,7 @@ function registrarDuracion() {
   if (!inicioSesion) return;
   const segundos = Math.round((Date.now() - inicioSesion) / 1000);
   inicioSesion = null;
-  if (segundos >= 5) llamar('registrarUso', { segundos }).catch((err) => console.error(err));
+  if (segundos >= 5) llamar('registrarUso', { segundos, fecha: hoyLocal() }).catch((err) => console.error(err));
 }
 
 // ---------- Micrófono: elección, medidor y diagnóstico ----------
@@ -1152,7 +1266,7 @@ for (const opcion of ui.opcionesCoach) {
 
 ui.reiniciar.addEventListener('click', async () => {
   if (activa) return;
-  if (!confirm('¿Borrar tu progreso y volver al Nivel 1?')) return;
+  if (!confirm('¿Borrar tu progreso y volver al Nivel 1? Se conservan tu propósito y tus días practicados.')) return;
   try {
     actualizarEstado((await llamar('reiniciarProgreso')).mensaje);
   } catch (err) {
