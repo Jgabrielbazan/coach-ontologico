@@ -87,6 +87,7 @@ export function progresoInicial() {
     lecciones: [],
     cuaderno: [],
     escalera: { escalones: [] },
+    oratoria: [],
     perfil: {},
     trato: null,
     derivacion: null,
@@ -383,9 +384,21 @@ export function aplicarTrato(actual, trato) {
 
 /** Vuelve al Nivel 1 conservando el coach, el avatar, el trato, el propósito, el perfil y los días practicados. */
 export function aplicarReinicio(actual) {
-  const { coach, avatar, trato, proposito, perfil, dias, derivacion, escalera, recordatorio } = normalizar(actual);
+  const { coach, avatar, trato, proposito, perfil, dias, derivacion, escalera, oratoria, recordatorio } = normalizar(actual);
   return {
-    progreso: { ...progresoInicial(), coach, avatar, trato, proposito, perfil, dias, derivacion, escalera, ...(recordatorio ? { recordatorio } : {}) },
+    progreso: {
+      ...progresoInicial(),
+      coach,
+      avatar,
+      trato,
+      proposito,
+      perfil,
+      dias,
+      derivacion,
+      escalera,
+      oratoria,
+      ...(recordatorio ? { recordatorio } : {}),
+    },
     cambio: true,
     mensaje: 'Programa reiniciado.',
   };

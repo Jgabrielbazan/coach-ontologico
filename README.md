@@ -48,6 +48,11 @@ en la PC y en el móvil, cada una por su cuenta. Entras con tu cuenta de Google 
 - **Cómo te habla el coach:** cada persona elige femenino, masculino o neutro (al elegir el
   avatar o en Ajustes). Si no lo eligió, el coach usa formas neutras y se lo pregunta; nunca
   lo deduce de la voz ni del nombre.
+- **Laboratorio de oratoria:** grabas hasta 2 minutos; la app mide en el aparato el tiempo
+  hablando y las pausas largas, y Gemini (`GEMINI_MODEL_ANALISIS`, por defecto
+  `gemini-flash-latest`) transcribe literal para contar muletillas, palabras por minuto y
+  frases que terminan como pregunta. Gráficos de evolución y devolución del coach por voz si
+  hay una sesión abierta. Máximo 15 análisis por día y persona.
 - **Tu escalera de exposición:** las situaciones que dan miedo, de 0 a 10; se registra la
   ansiedad antes y después de cada intento y un escalón queda superado cuando la ansiedad
   previa baja a 3 o menos.

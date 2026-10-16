@@ -383,6 +383,11 @@
           <span id="texto-hablar">Mantén apretado para hablar</span>
         </button>
 
+        <button type="button" class="boton-laboratorio" id="abrir-laboratorio">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12h-2z"/></svg>
+          <span>Laboratorio de oratoria</span>
+        </button>
+
         <nav class="controles" id="controles" hidden>
           <button type="button" id="boton-silencio" class="control" aria-pressed="false">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12h-2z"/></svg>
@@ -501,6 +506,44 @@
           </label>
       </div>
       <button type="button" class="boton-fantasma cerrar-dialogo" id="listo-ajustes">Listo</button>
+    </dialog>
+
+    <dialog class="dialogo-ajustes dialogo-laboratorio" id="dialogo-laboratorio" aria-labelledby="titulo-laboratorio">
+      <div class="ajustes-cabecera">
+        <h2 id="titulo-laboratorio" class="titulo-dialogo">Laboratorio de oratoria</h2>
+        <button type="button" class="celebracion-cerrar" id="cerrar-laboratorio" aria-label="Cerrar">×</button>
+      </div>
+      <p class="bajada-dialogo">Habla hasta 2 minutos sobre un tema. Mido tu ritmo, tus muletillas, tus pausas y cómo terminas las frases.</p>
+      <div class="lab-tema">
+        <input id="tema-laboratorio" placeholder="¿Sobre qué vas a hablar?" maxlength="120" aria-label="Tema" />
+        <div class="sugerencias">
+          <button type="button" class="sugerencia sugerencia-lab">Presentarme en un minuto</button>
+          <button type="button" class="sugerencia sugerencia-lab">Contar un logro del que me siento orgulloso</button>
+          <button type="button" class="sugerencia sugerencia-lab">Defender una idea en una reunión</button>
+          <button type="button" class="sugerencia sugerencia-lab">Explicar algo que sé mucho</button>
+        </div>
+      </div>
+      <div class="lab-grabar">
+        <button type="button" class="boton-grabar" id="boton-grabar" aria-pressed="false">
+          <span class="punto-grabar" aria-hidden="true"></span>
+          <span id="texto-grabar">Grabar</span>
+        </button>
+        <div class="lab-tiempo"><strong id="tiempo-laboratorio">0:00</strong> / 2:00</div>
+        <div class="medidor lab-medidor" aria-hidden="true"><span id="nivel-laboratorio"></span></div>
+        <p id="estado-laboratorio" class="nota" role="status"></p>
+      </div>
+      <section id="resultados-laboratorio" class="lab-resultados" hidden>
+        <div class="lab-metricas" id="metricas-laboratorio"></div>
+        <div class="lab-devolucion" id="devolucion-laboratorio"></div>
+        <details class="historial">
+          <summary>Ver la transcripción</summary>
+          <p id="transcripcion-laboratorio" class="lab-transcripcion"></p>
+        </details>
+      </section>
+      <section id="historial-laboratorio" class="lab-historial" hidden>
+        <h3 class="titulo-seccion-ajustes">Tu evolución</h3>
+        <div id="graficos-laboratorio" class="lab-graficos"></div>
+      </section>
     </dialog>
 
     <dialog class="dialogo-ajustes dialogo-usuarios" id="dialogo-usuarios" aria-labelledby="titulo-usuarios">

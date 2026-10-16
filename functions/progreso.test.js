@@ -533,3 +533,42 @@ test('informe semanal: resumen de la semana y envío los domingos a la hora eleg
   // Reiniciar el programa ya no borra el recordatorio.
   assert.equal(aplicarReinicio({ ...progresoInicial(), recordatorio: rec }).progreso.recordatorio.hora, 20);
 });
+
+test('laboratorio de oratoria: métricas por minuto, lectura del ritmo e historial', async () => {
+  const { calcularMetricas, lecturaRitmo, aplicarOratoria, analisisDeHoy, textoOratoria, pedidoDevolucion, contarPalabras } = await import('./oratoria.js');
+  const { aplicarReinicio } = await import('./progreso.js');
+  const { instruccionesSistema } = await import('./coach.js');
+  assert.equal(contarPalabras('Eh, bueno... o sea, ¿qué tal? Hola-hola'), 7);
+  const transcripcion = Array.from({ length: 140 }, (_, i) => (i % 20 === 0 ? 'eh' : 'palabra')).join(' ');
+  const m = calcularMetricas({
+    duracion: 70, tiempoHablando: 60, pausasLargas: 3,
+    analisis: { transcripcion, muletillas: [{ palabra: 'Eh', veces: 7 }, { palabra: 'este', veces: 2 }, { palabra: '', veces: 4 }], frases: 9, finalesAscendentes: 12, fortaleza: 'Buena energía', mejora: 'Bajar la velocidad' },
+  });
+  assert.equal(m.palabras, 140);
+  assert.equal(m.ppm, 140);
+  assert.equal(m.totalMuletillas, 9);
+  assert.equal(m.muletillasPorMin, 9);
+  assert.equal(m.finalesAscendentes, 9); // nunca más que las frases
+  assert.deepEqual(m.muletillas.map((x) => x.palabra), ['eh', 'este']);
+  assert.equal(lecturaRitmo(m.ppm), 'ideal');
+  assert.equal(lecturaRitmo(185), 'rápido');
+  assert.equal(lecturaRitmo(95), 'lento');
+  const ahora = new Date('2026-10-16T15:00:00Z');
+  let p = aplicarOratoria(progresoInicial(), m, '  Presentarme  en un minuto ', ahora).progreso;
+  assert.equal(p.oratoria[0].tema, 'Presentarme en un minuto');
+  assert.equal(p.oratoria[0].transcripcion, undefined);
+  assert.equal(analisisDeHoy(p, ahora), 1);
+  assert.match(textoOratoria(p.oratoria), /140 palabras\/min \(ideal\), 9 muletillas\/min, 3 pausas largas, 9 de 9 frases/);
+  assert.match(instruccionesSistema(p), /laboratorio de oratoria/);
+  assert.match(pedidoDevolucion(m, 'Presentarme', p.oratoria[0]), /La vez anterior: 140 palabras\/min/);
+  assert.equal(aplicarReinicio(p).progreso.oratoria.length, 1);
+});
+
+test('grabadora: tiempo hablando y pausas largas medidos en el aparato', async () => {
+  const { medirPausas } = await import('../web/grabadora.js');
+  const v = (patron) => [...patron].map((c) => c === '#');
+  assert.deepEqual(medirPausas(v('....')), { tiempoHablando: 0, pausasLargas: 0 });
+  // 1 s de silencio inicial (no cuenta), voz, una pausa de 1,5 s, voz, una pausa corta de 0,5 s, voz.
+  const voz = v('..........' + '#'.repeat(20) + '.'.repeat(15) + '#'.repeat(10) + '.....' + '#'.repeat(5) + '...');
+  assert.deepEqual(medirPausas(voz), { tiempoHablando: 6, pausasLargas: 1 });
+});

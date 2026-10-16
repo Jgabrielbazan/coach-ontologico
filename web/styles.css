@@ -2591,3 +2591,226 @@ button {
   font: inherit;
   font-size: 0.85rem;
 }
+
+/* ---------- Laboratorio de oratoria ---------- */
+
+.boton-laboratorio {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 10px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--actual-borde);
+  background: var(--vidrio);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: var(--violeta);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.boton-laboratorio svg {
+  width: 17px;
+  height: 17px;
+  fill: currentColor;
+}
+
+.dialogo-laboratorio {
+  width: min(94vw, 600px);
+}
+
+.lab-tema input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--borde);
+  background: var(--vidrio-fuerte);
+  color: var(--texto);
+  font: inherit;
+}
+
+.lab-tema .sugerencias {
+  margin-top: 8px;
+}
+
+.sugerencia-lab {
+  color: inherit;
+  font: inherit;
+  font-size: 0.8rem;
+}
+
+.lab-grabar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin: 16px 0 6px;
+  text-align: center;
+}
+
+.boton-grabar {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 26px;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(120deg, #dc2626, #db2777);
+  color: #ffffff;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 10px 26px rgb(220 38 38 / 0.3);
+}
+
+.boton-grabar:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.punto-grabar {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #ffffff;
+}
+
+.boton-grabar[aria-pressed='true'] .punto-grabar {
+  border-radius: 2px;
+  animation: latido-grabar 1s ease-in-out infinite;
+}
+
+@keyframes latido-grabar {
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.lab-tiempo {
+  font-size: 0.9rem;
+  color: var(--texto-suave);
+}
+
+.lab-medidor {
+  width: min(100%, 260px);
+}
+
+.lab-metricas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.lab-metrica {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--borde);
+  background: var(--vidrio-fuerte);
+}
+
+.lab-metrica small {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--texto-tenue);
+}
+
+.lab-metrica strong {
+  font-family: var(--fuente-titulo);
+  font-size: 1.5rem;
+}
+
+.lab-metrica span {
+  font-size: 0.75rem;
+  color: var(--texto-suave);
+}
+
+.lab-metrica.bien {
+  border-color: color-mix(in srgb, var(--exito) 45%, transparent);
+}
+
+.lab-metrica.bien strong {
+  color: var(--exito);
+}
+
+.lab-metrica.atencion {
+  border-color: color-mix(in srgb, #d97706 50%, transparent);
+}
+
+.lab-metrica.atencion strong {
+  color: #d97706;
+}
+
+.lab-devolucion p {
+  margin: 6px 0 0;
+  font-size: 0.9rem;
+}
+
+.lab-transcripcion {
+  margin: 6px 0 0;
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.lab-transcripcion mark {
+  padding: 0 3px;
+  border-radius: 4px;
+  background: color-mix(in srgb, #d97706 30%, transparent);
+  color: inherit;
+}
+
+.lab-historial {
+  margin-top: 14px;
+}
+
+.lab-graficos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.lab-grafico {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--borde);
+  background: var(--vidrio-fuerte);
+}
+
+.lab-grafico figcaption {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  color: var(--texto-suave);
+}
+
+.lab-grafico svg {
+  width: 100%;
+  height: auto;
+  margin-top: 4px;
+}
+
+.lab-grafico path {
+  fill: none;
+  stroke: var(--violeta);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+
+.lab-grafico circle {
+  fill: var(--violeta);
+}
+
+.lab-grafico .banda-ideal {
+  fill: color-mix(in srgb, var(--exito) 16%, transparent);
+}

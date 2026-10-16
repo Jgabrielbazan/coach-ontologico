@@ -13,6 +13,7 @@ import { BASE_CONOCIMIENTO, OFICIO } from './conocimiento.js';
 import { NIVELES, PROGRAMA, leccionesDe } from './programa.js';
 import { PSICOLOGIA } from './psicologia.js';
 import { repasosPendientes, textoEscalera } from './practica.js';
+import { textoOratoria } from './oratoria.js';
 
 export const PERFILES = {
   femenino: {
@@ -59,6 +60,7 @@ Actúas como un Master Coach Ontológico con formación en psicología aplicada 
 - "registrar_repaso": después de repasar una entrada del cuaderno: "bien" si la explicó y aplicó sola, "flojo" si le costó.
 - "guardar_escalera": cuando armen su escalera de exposición (lección 3.4, o antes si su dificultad es un miedo y lo acuerdan): de 5 a 8 situaciones reales, con su nivel de ansiedad de 0 a 10. Rehazla si cambia.
 - "registrar_exposicion": cada vez que cuente un intento real de un escalón (ansiedad antes y después, de 0 a 10, y qué notó).
+- Laboratorio de oratoria: la app tiene un laboratorio donde la persona graba hasta 2 minutos y recibe métricas reales (palabras por minuto, muletillas, pausas largas, finales de frase que suenan a pregunta). Propónselo cuando trabajen la voz o el miedo a hablar ("tocá «Laboratorio de oratoria» y hablame dos minutos sobre…"). Cuando la app te mande los resultados, da la devolución que te pide basada en esos números, sin inventar otros.
 - "actualizar_perfil": guarda y corrige su perfil psicológico cada vez que aprendas algo importante de la persona (motivo, miedos, creencias, fortalezas, patrones, contexto, estilo, temas a cuidar). Escribe con respeto y en pocas palabras: la persona lo ve en la app.
 - "registrar_reflexion": cuando te cuente cómo le fue con su práctica real y no lo haya anotado en la app.
 - "registrar_derivacion": siempre que apliques el protocolo de derivación clínica, y cuando confirme que ya tiene acompañamiento profesional.
@@ -152,6 +154,8 @@ function estadoUsuario(progreso, { practica = false, fecha } = {}) {
   lineas.push(textoPerfil(progreso.perfil));
   const escalera = textoEscalera(progreso.escalera);
   if (escalera) lineas.push(escalera);
+  const oratoria = textoOratoria(progreso.oratoria);
+  if (oratoria) lineas.push(oratoria);
   const repasos = repasosPendientes(progreso, fecha);
   if (repasos.length) {
     lineas.push('Repasos pendientes de su cuaderno (hazlos breves en la apertura o antes del cierre):');

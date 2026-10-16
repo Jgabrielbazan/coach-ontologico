@@ -2,6 +2,8 @@ import { GoogleGenAI } from '@google/genai';
 import { Camara, Microfono, Reproductor, listarMicrofonos } from './audio.js';
 import { AVATARES } from './avatares.js';
 import { escalonActual, escalonSuperado, resumenSemanal } from '../functions/practica.js';
+import { MAX_GRABACION_SEG, MIN_HABLA_SEG, RITMO_IDEAL, lecturaRitmo, pedidoDevolucion } from '../functions/oratoria.js';
+import { Grabadora } from './grabadora.js';
 // Las reglas y el programa son los mismos que usa el servidor.
 import { NIVELES, PROGRAMA } from '../functions/programa.js';
 import {
@@ -53,7 +55,7 @@ const ui = {
   opcionesModo: document.querySelectorAll('.opcion-modo'),
   panelPractica: $('panel-practica'),
   campoSituacion: $('campo-situacion'),
-  sugerencias: document.querySelectorAll('.sugerencia'),
+  sugerencias: document.querySelectorAll('#panel-practica .sugerencia'),
   conversacion: $('conversacion'),
   formularioMensaje: $('formulario-mensaje'),
   campoMensaje: $('campo-mensaje'),
@@ -285,6 +287,7 @@ function mostrarProgreso(datos) {
   ui.resumenSemana.textContent = `Resumen de la semana: ${resumenSemanal(p).cuerpo}`;
   mostrarEscalera(p.escalera);
   mostrarCuaderno(p.cuaderno);
+  if (dialogoLaboratorio.open) mostrarHistorialOratoria(p.oratoria ?? []);
   if (p.recordatorio?.semanal !== undefined && document.activeElement !== ui.activarSemanal) {
     ui.activarSemanal.checked = p.recordatorio.semanal;
   }
@@ -672,6 +675,196 @@ function mostrarLecciones(item, nivel, p) {
         req.espera ? ' · reintento mañana' : ''
       }`;
   caja.replaceChildren(lista, requisitos);
+}
+
+// ---------- Laboratorio de oratoria ----------
+
+const dialogoLaboratorio = $('dialogo-laboratorio');
+let grabadora = null;
+let temporizadorLaboratorio = null;
+let microfonoAntesDeGrabar = null; // para devolverle el micrófono a la sesión con el coach
+
+const minutosYSegundos = (segundos) => `${Math.floor(segundos / 60)}:${String(Math.floor(segundos % 60)).padStart(2, '0')}`;
+
+function estadoLaboratorio(texto) {
+  $('estado-laboratorio').textContent = texto ?? '';
+}
+
+function abrirLaboratorio() {
+  estadoLaboratorio(
+    activa
+      ? 'Mientras grabas, tu coach no te escucha; al terminar te da la devolución por voz.'
+      : 'Puedes usarlo solo, o durante una sesión para que tu coach te dé la devolución por voz.',
+  );
+  mostrarHistorialOratoria(progresoActual.oratoria ?? []);
+  dialogoLaboratorio.showModal();
+}
+
+async function empezarGrabacion() {
+  $('resultados-laboratorio').hidden = true;
+  grabadora = new Grabadora({
+    idDispositivo: leerMicrofonoGuardado(),
+    alNivel: (nivel, segundos) => {
+      $('nivel-laboratorio').style.transform = `scaleX(${nivel})`;
+      $('tiempo-laboratorio').textContent = minutosYSegundos(segundos);
+    },
+  });
+  try {
+    // Durante una sesión, el coach no escucha la grabación ni habla encima.
+    if (activa && microfono) {
+      microfonoAntesDeGrabar = microfono.silenciado;
+      microfono.silenciado = true;
+      reproductor.cortar();
+    }
+    await grabadora.iniciar();
+  } catch (err) {
+    devolverMicrofono();
+    grabadora = null;
+    estadoLaboratorio(err.name === 'NotAllowedError' ? 'Necesito permiso para usar el micrófono.' : err.message);
+    return;
+  }
+  $('boton-grabar').setAttribute('aria-pressed', 'true');
+  $('texto-grabar').textContent = 'Detener';
+  estadoLaboratorio('Grabando… habla con naturalidad, como si tuvieras público delante.');
+  temporizadorLaboratorio = setInterval(() => {
+    if (grabadora?.segundos >= MAX_GRABACION_SEG) terminarGrabacion();
+  }, 250);
+}
+
+function devolverMicrofono() {
+  if (microfonoAntesDeGrabar !== null && microfono) microfono.silenciado = microfonoAntesDeGrabar;
+  microfonoAntesDeGrabar = null;
+}
+
+async function terminarGrabacion() {
+  if (!grabadora) return;
+  clearInterval(temporizadorLaboratorio);
+  const grabacion = grabadora.detener();
+  grabadora = null;
+  devolverMicrofono();
+  $('boton-grabar').setAttribute('aria-pressed', 'false');
+  $('texto-grabar').textContent = 'Grabar otra vez';
+  $('nivel-laboratorio').style.transform = 'scaleX(0)';
+  if (grabacion.tiempoHablando < MIN_HABLA_SEG) {
+    estadoLaboratorio(`Casi no se escuchó voz. Habla al menos ${MIN_HABLA_SEG} segundos (y revisa el micrófono en Ajustes).`);
+    return;
+  }
+  $('boton-grabar').disabled = true;
+  estadoLaboratorio('Analizando tu grabación…');
+  const tema = $('tema-laboratorio').value.trim();
+  const anterior = (progresoActual.oratoria ?? []).at(-1);
+  try {
+    const { metricas } = await llamar('analizarOratoria', { ...grabacion, tema, fecha: hoyLocal() });
+    mostrarResultadoOratoria(metricas);
+    if (sesion) {
+      pedirAlCoach(pedidoDevolucion(metricas, tema, anterior));
+      estadoLaboratorio('Listo. Tu coach te está dando la devolución por voz.');
+    } else {
+      estadoLaboratorio('Listo. Para la devolución por voz, usa el laboratorio durante una sesión con tu coach.');
+    }
+  } catch (err) {
+    estadoLaboratorio(err.message);
+  } finally {
+    $('boton-grabar').disabled = false;
+  }
+}
+
+function mostrarResultadoOratoria(m) {
+  const tarjeta = (titulo, valor, detalle, clase = '') => {
+    const caja = document.createElement('div');
+    caja.className = `lab-metrica ${clase}`;
+    const t = document.createElement('small');
+    t.textContent = titulo;
+    const v = document.createElement('strong');
+    v.textContent = valor;
+    const d = document.createElement('span');
+    d.textContent = detalle;
+    caja.append(t, v, d);
+    return caja;
+  };
+  const ritmo = lecturaRitmo(m.ppm);
+  const top = m.muletillas.slice(0, 3).map((x) => `«${x.palabra}» ×${x.veces}`).join(' · ');
+  $('metricas-laboratorio').replaceChildren(
+    tarjeta('Ritmo', `${m.ppm}`, `palabras/min · ${ritmo} · objetivo ${RITMO_IDEAL.min}–${RITMO_IDEAL.max}`, ritmo === 'ideal' ? 'bien' : 'atencion'),
+    tarjeta('Muletillas', `${m.totalMuletillas}`, `${m.muletillasPorMin}/min${top ? ` · ${top}` : ''}`, m.muletillasPorMin <= 2 ? 'bien' : 'atencion'),
+    tarjeta('Pausas largas', `${m.pausasLargas}`, 'silencios de más de 1,2 s'),
+    tarjeta('Finales como pregunta', `${m.finalesAscendentes} de ${m.frases}`, 'frases que suben al final', m.finalesAscendentes <= 1 ? 'bien' : 'atencion'),
+    tarjeta('Tiempo hablando', minutosYSegundos(m.tiempoHablando), `${m.palabras} palabras`),
+  );
+  const devolucion = $('devolucion-laboratorio');
+  devolucion.replaceChildren();
+  for (const [titulo, texto] of [['Lo que funcionó', m.fortaleza], ['Para mejorar', m.mejora]]) {
+    if (!texto) continue;
+    const p = document.createElement('p');
+    const b = document.createElement('strong');
+    b.textContent = `${titulo}: `;
+    p.append(b, texto);
+    devolucion.append(p);
+  }
+  // Transcripción con las muletillas resaltadas.
+  const transcripcion = $('transcripcion-laboratorio');
+  transcripcion.replaceChildren();
+  const palabras = new Set(m.muletillas.map((x) => x.palabra));
+  for (const parte of m.transcripcion.split(/(\s+)/)) {
+    const limpia = parte.toLowerCase().replace(/[^\p{L}]/gu, '');
+    if (palabras.has(limpia)) {
+      const marca = document.createElement('mark');
+      marca.textContent = parte;
+      transcripcion.append(marca);
+    } else {
+      transcripcion.append(parte);
+    }
+  }
+  $('resultados-laboratorio').hidden = false;
+}
+
+/** Gráfico de líneas simple (SVG) con la franja ideal sombreada. */
+function grafico(valores, { titulo, unidad, ideal }) {
+  const ancho = 300;
+  const alto = 90;
+  const min = Math.min(...valores, ideal?.[0] ?? Infinity) * 0.9;
+  const max = Math.max(...valores, ideal?.[1] ?? -Infinity, 1) * 1.1;
+  const x = (i) => (valores.length === 1 ? ancho / 2 : 10 + (i * (ancho - 20)) / (valores.length - 1));
+  const y = (v) => alto - 10 - ((v - min) / (max - min || 1)) * (alto - 20);
+  const banda = ideal
+    ? `<rect x="0" y="${y(ideal[1])}" width="${ancho}" height="${y(ideal[0]) - y(ideal[1])}" class="banda-ideal"/>`
+    : '';
+  const linea = valores.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(' ');
+  const puntos = valores.map((v, i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="3.5"/>`).join('');
+  return `<figure class="lab-grafico"><figcaption>${titulo} <strong>${valores.at(-1)} ${unidad}</strong></figcaption>
+    <svg viewBox="0 0 ${ancho} ${alto}" role="img" aria-label="${titulo}: ${valores.join(', ')}">${banda}<path d="${linea}"/>${puntos}</svg></figure>`;
+}
+
+function mostrarHistorialOratoria(historial) {
+  const ultimas = historial.slice(-10);
+  $('historial-laboratorio').hidden = ultimas.length < 2;
+  if (ultimas.length < 2) return;
+  $('graficos-laboratorio').innerHTML =
+    grafico(
+      ultimas.map((o) => o.ppm),
+      { titulo: 'Palabras por minuto', unidad: 'ppm', ideal: [RITMO_IDEAL.min, RITMO_IDEAL.max] },
+    ) +
+    grafico(
+      ultimas.map((o) => o.muletillasPorMin),
+      { titulo: 'Muletillas por minuto', unidad: '/min', ideal: [0, 2] },
+    );
+}
+
+$('abrir-laboratorio').addEventListener('click', abrirLaboratorio);
+$('cerrar-laboratorio').addEventListener('click', () => dialogoLaboratorio.close());
+dialogoLaboratorio.addEventListener('close', () => {
+  if (grabadora) {
+    clearInterval(temporizadorLaboratorio);
+    grabadora.cancelar();
+    grabadora = null;
+    devolverMicrofono();
+    $('boton-grabar').setAttribute('aria-pressed', 'false');
+    $('texto-grabar').textContent = 'Grabar';
+  }
+});
+$('boton-grabar').addEventListener('click', () => (grabadora ? terminarGrabacion() : empezarGrabacion()));
+for (const sugerencia of document.querySelectorAll('.sugerencia-lab')) {
+  sugerencia.addEventListener('click', () => ($('tema-laboratorio').value = sugerencia.textContent));
 }
 
 // ---------- Tu escalera de exposición ----------
