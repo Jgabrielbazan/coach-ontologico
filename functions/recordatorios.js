@@ -5,6 +5,7 @@ import { createHash } from 'node:crypto';
 import webpush from 'web-push';
 import { NIVELES, PERFILES } from './coach.js';
 import { normalizar } from './progreso.js';
+import { resumenSemanal } from './practica.js';
 
 // Margen para los atrasos del programador: si el aviso de las 20 h sale a las 21 h, vale igual.
 const HORAS_DE_TOLERANCIA = 3;
@@ -43,13 +44,31 @@ export function debeEnviar(recordatorio, ahora = new Date()) {
   return { enviar: enHorario && recordatorio.ultimoEnvio !== fecha, fecha };
 }
 
+/** ¿Toca el informe semanal? Los domingos (hora local), a partir de la hora del recordatorio, una vez. */
+export function debeEnviarSemanal(recordatorio, ahora = new Date()) {
+  if (!recordatorio?.activo || recordatorio.semanal === false) return { enviar: false };
+  const { fecha, hora } = horaLocal(recordatorio.zona, ahora);
+  const domingo = new Date(`${fecha}T12:00:00Z`).getUTCDay() === 0;
+  const enHorario = hora >= recordatorio.hora && hora < recordatorio.hora + HORAS_DE_TOLERANCIA;
+  return { enviar: domingo && enHorario && recordatorio.ultimoSemanal !== fecha, fecha };
+}
+
+/** Texto de la notificación del informe semanal. */
+export function mensajeSemanal(datos, ahora = new Date()) {
+  const p = normalizar(datos);
+  const nombre = (PERFILES[p.coach] ?? PERFILES.femenino).nombre;
+  return { titulo: `Tu semana, con ${nombre}`, cuerpo: recortar(resumenSemanal(p, ahora).cuerpo, 230) };
+}
+
 /** Normaliza lo que manda la app y lo guarda en el progreso. */
-export function aplicarRecordatorio(actual, { activo, hora, zona } = {}) {
+export function aplicarRecordatorio(actual, { activo, hora, zona, semanal } = {}) {
   const progreso = structuredClone(normalizar(actual));
   const horaNum = Math.round(Number(hora));
   progreso.recordatorio = {
     ...(progreso.recordatorio ?? {}),
     activo: Boolean(activo),
+    // Informe semanal de los domingos: activado salvo que la persona lo apague.
+    semanal: semanal === undefined ? (progreso.recordatorio?.semanal ?? true) : Boolean(semanal),
     hora: Number.isFinite(horaNum) ? Math.min(23, Math.max(0, horaNum)) : 20,
     zona: zonaValida(zona) ? zona : 'UTC',
   };

@@ -48,6 +48,13 @@ en la PC y en el móvil, cada una por su cuenta. Entras con tu cuenta de Google 
 - **Cómo te habla el coach:** cada persona elige femenino, masculino o neutro (al elegir el
   avatar o en Ajustes). Si no lo eligió, el coach usa formas neutras y se lo pregunta; nunca
   lo deduce de la voz ni del nombre.
+- **Tu escalera de exposición:** las situaciones que dan miedo, de 0 a 10; se registra la
+  ansiedad antes y después de cada intento y un escalón queda superado cuando la ansiedad
+  previa baja a 3 o menos.
+- **Tu cuaderno:** cada lección deja la distinción en palabras de la persona y un ejemplo
+  suyo; el coach la hace repasar a 1, 3, 7, 14, 30 y 60 días. Se descarga en PDF.
+- **Informe semanal:** los domingos, una notificación con los días practicados, las
+  lecciones, las exposiciones, un avance y el foco de la semana siguiente.
 - **Tu propósito:** el coach te ayuda a declarar para qué haces el programa (o lo escribes
   tú); lo retoma en los momentos clave y aparece en tus certificados.
 - **Tu semana:** los días que practicaste (sesión de al menos 1 minuto o reflexión de la

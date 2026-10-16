@@ -12,6 +12,7 @@ import {
 import { BASE_CONOCIMIENTO, OFICIO } from './conocimiento.js';
 import { NIVELES, PROGRAMA, leccionesDe } from './programa.js';
 import { PSICOLOGIA } from './psicologia.js';
+import { repasosPendientes, textoEscalera } from './practica.js';
 
 export const PERFILES = {
   femenino: {
@@ -45,7 +46,7 @@ Actúas como un Master Coach Ontológico con formación en psicología aplicada 
 9. HONESTIDAD: no inventes datos científicos. Si algo es una interpretación de la escuela ontológica y no un hecho comprobado, preséntalo como tal.
 
 ## Cómo es cada sesión del programa (síguelo siempre)
-1. Apertura (2 o 3 minutos): saluda; pregunta cómo llega hoy (ánimo, cuerpo, energía). Retoma su práctica en la vida real: qué hizo, qué notó, qué le costó. Si te lo cuenta y no lo anotó en la app, guárdalo con "registrar_reflexion". Reconoce un avance concreto si lo hay. Acuerden para qué es la sesión de hoy.
+1. Apertura (2 o 3 minutos): saluda; pregunta cómo llega hoy (ánimo, cuerpo, energía). Retoma su práctica en la vida real: qué hizo, qué notó, qué le costó. Si te lo cuenta y no lo anotó en la app, guárdalo con "registrar_reflexion" (o con "registrar_exposicion" si fue un escalón de su escalera). Reconoce un avance concreto si lo hay. Si hay un repaso pendiente en el estado, hazlo breve: que explique la distinción con sus palabras y un ejemplo propio, y regístralo con "registrar_repaso". Acuerden para qué es la sesión de hoy.
 2. Núcleo, según el estado (ver "Estado del usuario"):
    - Si la LECCIÓN DEL DÍA está DISPONIBLE: enseña la próxima lección (ver "Nivel actual en detalle"): el concepto de a pedazos, con ejemplos de su vida; luego el ejercicio; luego verifica la comprensión. Solo cuando veas la señal de dominio llama a "completar_leccion" con la evidencia. Si hoy no llega al dominio, está bien: la retoman la próxima sesión.
    - Si la lección del día YA ESTÁ COMPLETADA: no enseñes contenido nuevo. Profundiza: aplica la lección a nuevas situaciones de su vida, haz juegos de rol, repasa una distinción anterior (pregúntale primero qué recuerda) o trabaja lo que trae hoy con las herramientas del programa.
@@ -53,7 +54,11 @@ Actúas como un Master Coach Ontológico con formación en psicología aplicada 
 3. Cierre (ver Herramientas): reconocimiento, práctica real ligada a la lección, algo para llevarse y resumen.
 
 ## Herramientas
-- "completar_leccion": solo con la lección que corresponde (la siguiente) y cuando viste la señal de dominio; incluye la evidencia (qué dijo o hizo). El sistema limita las lecciones nuevas por día: respeta lo que te responda.
+- "completar_leccion": solo con la lección que corresponde (la siguiente) y cuando viste la señal de dominio; incluye la evidencia (qué dijo o hizo) y, en "aprendizaje" y "ejemplo", la distinción tal como la explicó con sus palabras y un ejemplo de su vida: queda en su cuaderno para repasarla. El sistema limita las lecciones nuevas por día: respeta lo que te responda.
+- "anotar_aprendizaje": cuando descubra una distinción importante fuera de una lección (en sus palabras y con un ejemplo suyo).
+- "registrar_repaso": después de repasar una entrada del cuaderno: "bien" si la explicó y aplicó sola, "flojo" si le costó.
+- "guardar_escalera": cuando armen su escalera de exposición (lección 3.4, o antes si su dificultad es un miedo y lo acuerdan): de 5 a 8 situaciones reales, con su nivel de ansiedad de 0 a 10. Rehazla si cambia.
+- "registrar_exposicion": cada vez que cuente un intento real de un escalón (ansiedad antes y después, de 0 a 10, y qué notó).
 - "actualizar_perfil": guarda y corrige su perfil psicológico cada vez que aprendas algo importante de la persona (motivo, miedos, creencias, fortalezas, patrones, contexto, estilo, temas a cuidar). Escribe con respeto y en pocas palabras: la persona lo ve en la app.
 - "registrar_reflexion": cuando te cuente cómo le fue con su práctica real y no lo haya anotado en la app.
 - "registrar_derivacion": siempre que apliques el protocolo de derivación clínica, y cuando confirme que ya tiene acompañamiento profesional.
@@ -145,6 +150,13 @@ function estadoUsuario(progreso, { practica = false, fecha } = {}) {
     lineas.push('Todavía no declaró su propósito: es parte de la lección 1.1 (ver "Tu propósito").');
   }
   lineas.push(textoPerfil(progreso.perfil));
+  const escalera = textoEscalera(progreso.escalera);
+  if (escalera) lineas.push(escalera);
+  const repasos = repasosPendientes(progreso, fecha);
+  if (repasos.length) {
+    lineas.push('Repasos pendientes de su cuaderno (hazlos breves en la apertura o antes del cierre):');
+    for (const r of repasos) lineas.push(`- [${r.id}] «${r.distincion}»: lo que había dicho: ${r.explicacion}`);
+  }
   // Constancia: se reconoce con calidez, nunca se reprocha.
   const semana = diasUltimaSemana(progreso);
   if (semana >= 2) {
@@ -300,8 +312,10 @@ export const HERRAMIENTAS = [
           properties: {
             leccion: { type: 'STRING', description: 'Id de la lección, por ejemplo "1.2".' },
             evidencia: { type: 'STRING', description: 'Qué dijo o hizo el usuario que muestra el dominio, en una o dos frases.' },
+            aprendizaje: { type: 'STRING', description: 'La distinción de la lección tal como la explicó la persona, con sus palabras.' },
+            ejemplo: { type: 'STRING', description: 'Un ejemplo de su vida donde la aplica.' },
           },
-          required: ['leccion', 'evidencia'],
+          required: ['leccion', 'evidencia', 'aprendizaje'],
         },
       },
       {
@@ -313,6 +327,67 @@ export const HERRAMIENTAS = [
           properties: Object.fromEntries(
             Object.entries(CAMPOS_PERFIL).map(([clave, descripcion]) => [clave, { type: 'STRING', description: descripcion }]),
           ),
+        },
+      },
+      {
+        name: 'guardar_escalera',
+        description: 'Guarda (o rehace) su escalera de exposición: situaciones reales de su miedo, de menor a mayor dificultad.',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            escalones: {
+              type: 'ARRAY',
+              description: 'Entre 5 y 8 situaciones concretas de su vida.',
+              items: {
+                type: 'OBJECT',
+                properties: {
+                  texto: { type: 'STRING', description: 'La situación, concreta (ej.: "hacer una pregunta en la reunión del lunes").' },
+                  nivel: { type: 'INTEGER', description: 'Ansiedad que le genera, de 0 a 10.' },
+                },
+                required: ['texto', 'nivel'],
+              },
+            },
+          },
+          required: ['escalones'],
+        },
+      },
+      {
+        name: 'registrar_exposicion',
+        description: 'Registra un intento real de un escalón de su escalera.',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            escalon: { type: 'STRING', description: 'Id del escalón (entre corchetes en el estado), o su texto.' },
+            antes: { type: 'INTEGER', description: 'Ansiedad antes de hacerlo (0 a 10).' },
+            despues: { type: 'INTEGER', description: 'Ansiedad después (0 a 10).' },
+            nota: { type: 'STRING', description: 'Qué hizo y qué notó, en pocas palabras.' },
+          },
+          required: ['escalon', 'antes', 'despues'],
+        },
+      },
+      {
+        name: 'anotar_aprendizaje',
+        description: 'Anota en su cuaderno una distinción aprendida, en sus palabras y con un ejemplo de su vida.',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            distincion: { type: 'STRING', description: 'Nombre corto de la distinción (ej.: "Reclamo productivo").' },
+            explicacion: { type: 'STRING', description: 'Cómo la explicó la persona, con sus palabras.' },
+            ejemplo: { type: 'STRING', description: 'Un ejemplo concreto de su vida.' },
+          },
+          required: ['distincion', 'explicacion'],
+        },
+      },
+      {
+        name: 'registrar_repaso',
+        description: 'Registra el resultado de repasar una entrada del cuaderno.',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            id: { type: 'STRING', description: 'Id de la entrada (entre corchetes en el estado).' },
+            resultado: { type: 'STRING', enum: ['bien', 'flojo'], description: '"bien" si la explicó y aplicó sola; "flojo" si le costó.' },
+          },
+          required: ['id', 'resultado'],
         },
       },
       {
@@ -454,6 +529,8 @@ const HERRAMIENTAS_PRACTICA = [
         'actualizar_perfil',
         'definir_trato',
         'registrar_derivacion',
+        'registrar_exposicion',
+        'anotar_aprendizaje',
         'registrar_reflexion',
         'guardar_resumen_sesion',
       ].includes(f.name),

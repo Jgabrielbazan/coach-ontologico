@@ -4,7 +4,14 @@
 import { readFileSync } from 'node:fs';
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
-import { clavesVapid, debeEnviar, enviarNotificacion, mensajeRecordatorio } from './recordatorios.js';
+import {
+  clavesVapid,
+  debeEnviar,
+  debeEnviarSemanal,
+  enviarNotificacion,
+  mensajeRecordatorio,
+  mensajeSemanal,
+} from './recordatorios.js';
 
 const proyecto =
   process.env.GOOGLE_CLOUD_PROJECT ||
@@ -20,15 +27,20 @@ let enviados = 0;
 for (const usuario of usuarios.docs) {
   const datos = usuario.data();
   const { enviar, fecha } = debeEnviar(datos.recordatorio, ahora);
-  if (!enviar) continue;
+  // Los domingos, el informe semanal reemplaza al recordatorio de ese día.
+  const semanal = debeEnviarSemanal(datos.recordatorio, ahora);
+  if (!enviar && !semanal.enviar) continue;
 
   const suscripciones = await db.collection('suscripciones').where('uid', '==', usuario.id).get();
-  const mensaje = mensajeRecordatorio(datos);
+  const mensaje = semanal.enviar ? mensajeSemanal(datos, ahora) : mensajeRecordatorio(datos);
   for (const doc of suscripciones.docs) {
     const resultado = await enviarNotificacion(claves, doc.data().suscripcion, mensaje);
     if (resultado === 'ok') enviados++;
     if (resultado === 'vencida') await doc.ref.delete(); // el navegador la dio de baja
   }
-  await usuario.ref.update({ 'recordatorio.ultimoEnvio': fecha });
+  await usuario.ref.update({
+    'recordatorio.ultimoEnvio': fecha ?? semanal.fecha,
+    ...(semanal.enviar ? { 'recordatorio.ultimoSemanal': semanal.fecha } : {}),
+  });
 }
 console.log(`Usuarios con recordatorio: ${usuarios.size} · notificaciones enviadas: ${enviados}`);

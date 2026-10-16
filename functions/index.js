@@ -5,7 +5,16 @@ import { HttpsError, onCall } from 'firebase-functions/https';
 import { defineInt, defineSecret, defineString } from 'firebase-functions/params';
 import { GoogleGenAI } from '@google/genai';
 import { configuracionLive } from './coach.js';
+import { leccionesDe } from './programa.js';
 import { normalizarCorreo, resolverAcceso, resumenUsuario, validarInvitacion } from './acceso.js';
+import {
+  aplicarAgregarEscalon,
+  aplicarAprendizaje,
+  aplicarEscalera,
+  aplicarExposicion,
+  aplicarQuitarEscalon,
+  aplicarRepaso,
+} from './practica.js';
 import {
   aplicarRecordatorio,
   clavesVapid,
@@ -256,11 +265,11 @@ export const configPush = onCall(async (request) => {
 /** Activa o desactiva el recordatorio diario y registra (o borra) la suscripción de este aparato. */
 export const guardarRecordatorio = onCall(async (request) => {
   const cuenta = await usuarioAutorizado(request);
-  const { activo, hora, zona, suscripcion } = request.data ?? {};
+  const { activo, hora, zona, suscripcion, semanal } = request.data ?? {};
   if (activo && !suscripcionValida(suscripcion)) {
     throw new HttpsError('invalid-argument', 'Falta la suscripción a notificaciones de este aparato.');
   }
-  await actualizarProgreso(cuenta, (p) => aplicarRecordatorio(p, { activo, hora, zona }));
+  await actualizarProgreso(cuenta, (p) => aplicarRecordatorio(p, { activo, hora, zona, semanal }));
   if (suscripcionValida(suscripcion)) {
     const ref = db.collection('suscripciones').doc(idSuscripcion(suscripcion));
     if (activo) await ref.set({ uid: cuenta.uid, suscripcion, actualizada: new Date().toISOString() });
@@ -281,8 +290,14 @@ export const probarRecordatorio = onCall(async (request) => {
 
 export const completarLeccion = onCall(async (request) => {
   const cuenta = await usuarioAutorizado(request);
-  const { leccion, evidencia, fecha } = request.data ?? {};
-  const { mensaje } = await actualizarProgreso(cuenta, (p) => aplicarLeccion(p, { leccion, evidencia, fecha }));
+  const { leccion, evidencia, fecha, aprendizaje, ejemplo } = request.data ?? {};
+  // Si el coach trae lo aprendido en palabras de la persona, queda anotado en su cuaderno.
+  const { mensaje } = await actualizarProgreso(cuenta, (p) => {
+    const hecha = aplicarLeccion(p, { leccion, evidencia, fecha });
+    if (!hecha.cambio || !aprendizaje) return hecha;
+    const titulo = leccionesDe(p.nivel).find((l) => l.id === String(leccion))?.titulo ?? `Lección ${leccion}`;
+    return combinar(() => hecha, (q) => aplicarAprendizaje(q, { distincion: titulo, explicacion: aprendizaje, ejemplo, leccion }, fecha))(p);
+  });
   return { mensaje };
 });
 
@@ -388,3 +403,23 @@ export const quitarInvitado = onCall(async (request) => {
 });
 
 const ahoraISO = () => new Date().toISOString();
+
+// ---------- Escalera de exposición y cuaderno de aprendizajes ----------
+
+const regla = (aplicar) =>
+  onCall(async (request) => {
+    const cuenta = await usuarioAutorizado(request);
+    const { mensaje } = await actualizarProgreso(cuenta, (p) => aplicar(p, request.data ?? {}));
+    return { mensaje };
+  });
+
+export const guardarEscalera = regla((p, d) => aplicarEscalera(p, d.escalones));
+export const agregarEscalon = regla((p, d) => aplicarAgregarEscalon(p, d));
+export const quitarEscalon = regla((p, d) => aplicarQuitarEscalon(p, d.id));
+// Un intento de exposición también cuenta como día practicado.
+export const registrarExposicion = regla((p, d) => {
+  const intento = aplicarExposicion(p, d);
+  return intento.cambio ? combinar(() => intento, (q) => aplicarDia(q, d.fecha))(p) : intento;
+});
+export const anotarAprendizaje = regla((p, d) => aplicarAprendizaje(p, d, d.fecha));
+export const registrarRepaso = regla((p, d) => aplicarRepaso(p, d, d.fecha));

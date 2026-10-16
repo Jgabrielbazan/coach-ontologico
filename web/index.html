@@ -157,7 +157,49 @@
           <h3>Tu semana <span id="cuenta-semana" class="puntaje"></span></h3>
           <ol class="dias-semana" id="dias-semana" aria-label="Días practicados esta semana"></ol>
           <p id="texto-semana" class="texto-uso"></p>
+          <p id="resumen-semana" class="resumen-semana"></p>
         </section>
+
+        <details class="tarjeta plegable" id="tarjeta-escalera">
+          <summary>
+            <span class="plegable-titulo">Tu escalera</span>
+            <span id="resumen-escalera" class="tenue"></span>
+          </summary>
+          <div class="plegable-cuerpo">
+            <p id="vacio-escalera" class="nota">
+              Las situaciones que te dan miedo, de la más fácil a la más difícil (0 a 10). Se sube de a un escalón: la ansiedad baja con la
+              práctica. La arman con tu coach en la lección 3.4, o puedes empezarla ya.
+            </p>
+            <ol class="escalera" id="lista-escalera"></ol>
+            <form id="formulario-intento" class="reflexion" hidden>
+              <label for="escalon-intento">Registrar un intento real</label>
+              <select id="escalon-intento"></select>
+              <div class="fila-ansiedad">
+                <label>Ansiedad antes <output id="salida-antes">6</output><input type="range" id="ansiedad-antes" min="0" max="10" value="6" /></label>
+                <label>Después <output id="salida-despues">4</output><input type="range" id="ansiedad-despues" min="0" max="10" value="4" /></label>
+              </div>
+              <textarea id="nota-intento" rows="2" maxlength="300" placeholder="¿Qué hiciste y qué notaste?"></textarea>
+              <button type="submit" class="boton-fantasma">Guardar intento</button>
+            </form>
+            <form id="formulario-escalon" class="fila-escalon">
+              <input id="texto-escalon" placeholder="Agregar una situación…" maxlength="140" aria-label="Situación" />
+              <input id="nivel-escalon" type="number" min="0" max="10" value="5" aria-label="Ansiedad que te genera, de 0 a 10" />
+              <button type="submit" class="boton-fantasma">Agregar</button>
+            </form>
+          </div>
+        </details>
+
+        <details class="tarjeta plegable" id="tarjeta-cuaderno">
+          <summary>
+            <span class="plegable-titulo">Tu cuaderno</span>
+            <span id="resumen-cuaderno" class="tenue"></span>
+          </summary>
+          <div class="plegable-cuerpo">
+            <p id="vacio-cuaderno" class="nota">Cada lección deja aquí lo que aprendiste, en tus palabras y con un ejemplo tuyo. Tu coach te lo hace repasar a los días.</p>
+            <ol class="cuaderno" id="lista-cuaderno"></ol>
+            <button type="button" class="boton-fantasma" id="descargar-cuaderno" hidden>Descargar en PDF</button>
+          </div>
+        </details>
 
         <section class="tarjeta tarjeta-frase" id="tarjeta-frase" hidden>
           <h3>Para llevarte <span id="fecha-frase" class="tenue"></span></h3>
@@ -428,6 +470,10 @@
               </select>
               <button type="button" id="probar-recordatorio" class="boton-fantasma" hidden>Probar</button>
             </div>
+            <label class="interruptor">
+              <input type="checkbox" id="activar-semanal" checked />
+              <span>Informe semanal los domingos (con el recordatorio activado)</span>
+            </label>
             <p id="nota-recordatorio" class="nota" hidden></p>
           </div>
           <label class="campo-microfono">

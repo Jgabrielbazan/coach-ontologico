@@ -175,7 +175,7 @@ test('práctica libre: instrucciones y herramientas propias', async () => {
   assert.match(practica.systemInstruction, /práctica libre/);
   assert.match(practica.systemInstruction, /«Poner un límite a mi hermano»/);
   const nombres = practica.tools[0].functionDeclarations.map((f) => f.name);
-  assert.deepEqual(nombres, ['actualizar_perfil', 'definir_trato', 'registrar_derivacion', 'registrar_reflexion', 'asignar_tarea', 'dejar_frase', 'registrar_avance', 'guardar_resumen_sesion']);
+  assert.deepEqual(nombres, ['actualizar_perfil', 'registrar_exposicion', 'anotar_aprendizaje', 'definir_trato', 'registrar_derivacion', 'registrar_reflexion', 'asignar_tarea', 'dejar_frase', 'registrar_avance', 'guardar_resumen_sesion']);
   const programa = configuracionLive(progresoInicial());
   assert.ok(programa.tools[0].functionDeclarations.some((f) => f.name === 'registrar_evaluacion'));
 });
@@ -458,4 +458,78 @@ test('acceso: administrador, invitados con su límite y cuentas sin acceso', asy
   const ahora = new Date('2026-10-16T12:00:00Z');
   const r = resumenUsuario({ nivel: 2, uso: { mes: '2026-10', segundos: 1800, sesiones: 3 }, sesiones: [{ fecha: '2026-10-14T10:00:00Z', resumen: 'x' }], perfil: { motivo: 'privado' } }, ahora);
   assert.deepEqual(r, { nivel: 2, programaCompleto: false, minutosMes: 30, sesionesMes: 3, diasSemana: 0, ultimaSesion: '2026-10-14T10:00:00Z' });
+});
+
+test('escalera de exposición: armar, registrar intentos, superar escalones y conservarla al reiniciar', async () => {
+  const { aplicarEscalera, aplicarExposicion, aplicarAgregarEscalon, aplicarQuitarEscalon, escalonActual, textoEscalera } = await import('./practica.js');
+  const { aplicarReinicio } = await import('./progreso.js');
+  assert.equal(aplicarEscalera(progresoInicial(), [{ texto: 'solo uno', nivel: 3 }]).cambio, false);
+  let p = aplicarEscalera(progresoInicial(), [
+    { texto: 'Hablar ante 30 personas', nivel: 9 },
+    { texto: 'Hacer una pregunta en la reunión', nivel: 4 },
+    { texto: 'Opinar con mi equipo de 5', nivel: 6 },
+  ]).progreso;
+  assert.deepEqual(p.escalera.escalones.map((e) => e.nivel), [4, 6, 9]);
+  const primero = escalonActual(p.escalera);
+  assert.equal(primero.texto, 'Hacer una pregunta en la reunión');
+  let r = aplicarExposicion(p, { escalon: primero.id, antes: 7, despues: 4, nota: 'Me temblaba la voz' });
+  assert.match(r.mensaje, /Intento registrado: ansiedad 7 → 4/);
+  r = aplicarExposicion(r.progreso, { escalon: 'hacer una pregunta en la reunión', antes: 3, despues: 2 });
+  assert.match(r.mensaje, /¡Escalón superado!.*Próximo escalón: «Opinar con mi equipo de 5»/);
+  p = r.progreso;
+  assert.match(textoEscalera(p.escalera), /✓ superado/);
+  assert.match(textoEscalera(p.escalera), /➜ ACTUAL/);
+  assert.equal(aplicarExposicion(p, { escalon: 'no existe', antes: 1, despues: 1 }).cambio, false);
+  // Rehacerla conserva los intentos de los escalones que siguen.
+  p = aplicarEscalera(p, [{ texto: 'Hacer una pregunta en la reunión', nivel: 4 }, { texto: 'Dar un brindis', nivel: 7 }]).progreso;
+  assert.equal(p.escalera.escalones[0].intentos.length, 2);
+  p = aplicarAgregarEscalon(p, { texto: 'Presentar un proyecto', nivel: 8 }).progreso;
+  assert.equal(p.escalera.escalones.length, 3);
+  p = aplicarQuitarEscalon(p, p.escalera.escalones[2].id).progreso;
+  assert.equal(p.escalera.escalones.length, 2);
+  assert.equal(aplicarReinicio(p).progreso.escalera.escalones.length, 2);
+});
+
+test('cuaderno: aprendizajes con repaso espaciado y lecciones que lo alimentan', async () => {
+  const { aplicarAprendizaje, aplicarRepaso, repasosPendientes } = await import('./practica.js');
+  const { instruccionesSistema } = await import('./coach.js');
+  const hoy = new Date('2026-10-16T12:00:00Z');
+  assert.equal(aplicarAprendizaje(progresoInicial(), { distincion: 'PEDAF' }, '2026-10-16', hoy).cambio, false);
+  let p = aplicarAprendizaje(progresoInicial(), { distincion: 'Fundar juicios (PEDAF)', explicacion: 'Antes de creerme un juicio busco los hechos', ejemplo: 'Con mi jefe' }, '2026-10-16', hoy).progreso;
+  const entrada = p.cuaderno[0];
+  assert.equal(entrada.repaso.proximo, '2026-10-17');
+  assert.equal(repasosPendientes(p, '2026-10-16').length, 0);
+  assert.equal(repasosPendientes(p, '2026-10-17').length, 1);
+  assert.match(instruccionesSistema(p, '2026-10-17'), /Repasos pendientes de su cuaderno[\s\S]*«Fundar juicios \(PEDAF\)»/);
+  p = aplicarRepaso(p, { id: entrada.id, resultado: 'bien' }, '2026-10-17').progreso;
+  assert.equal(p.cuaderno[0].repaso.proximo, '2026-10-20'); // 3 días
+  p = aplicarRepaso(p, { id: entrada.id, resultado: 'bien' }, '2026-10-20').progreso;
+  assert.equal(p.cuaderno[0].repaso.proximo, '2026-10-27'); // 7 días
+  p = aplicarRepaso(p, { id: entrada.id, resultado: 'flojo' }, '2026-10-27').progreso;
+  assert.equal(p.cuaderno[0].repaso.proximo, '2026-10-28'); // vuelve a 1 día
+  assert.equal(p.cuaderno[0].repaso.veces, 3);
+});
+
+test('informe semanal: resumen de la semana y envío los domingos a la hora elegida', async () => {
+  const { resumenSemanal } = await import('./practica.js');
+  const { debeEnviarSemanal, mensajeSemanal, aplicarRecordatorio } = await import('./recordatorios.js');
+  const { aplicarAvance, aplicarDia, aplicarReinicio } = await import('./progreso.js');
+  const domingo = new Date('2026-10-18T23:30:00Z'); // domingo 20:30 en Buenos Aires
+  let p = aplicarDia(progresoInicial(), '2026-10-17', domingo).progreso;
+  p = aplicarDia(p, '2026-10-18', domingo).progreso;
+  p = { ...p, lecciones: [{ nivel: 1, id: '1.1', dia: '2026-10-17', fecha: '2026-10-17T15:00:00Z', evidencia: 'ok' }] };
+  p = aplicarAvance(p, { cita: 'Le pedí el informe para el viernes', tipo: 'avance' }).progreso;
+  const r = resumenSemanal(p, domingo);
+  assert.equal(r.lecciones, 1);
+  assert.match(r.cuerpo, /2 días de práctica · 1 lección\./);
+  assert.match(r.cuerpo, /Foco de la semana: la lección 1\.2, «El observador que eres»/);
+  assert.match(mensajeSemanal(p, domingo).titulo, /Tu semana, con Sofía/);
+  const rec = aplicarRecordatorio(progresoInicial(), { activo: true, hora: 20, zona: 'America/Argentina/Buenos_Aires' }).progreso.recordatorio;
+  assert.equal(rec.semanal, true);
+  assert.equal(debeEnviarSemanal(rec, domingo).enviar, true);
+  assert.equal(debeEnviarSemanal({ ...rec, ultimoSemanal: '2026-10-18' }, domingo).enviar, false);
+  assert.equal(debeEnviarSemanal({ ...rec, semanal: false }, domingo).enviar, false);
+  assert.equal(debeEnviarSemanal(rec, new Date('2026-10-17T23:30:00Z')).enviar, false); // sábado
+  // Reiniciar el programa ya no borra el recordatorio.
+  assert.equal(aplicarReinicio({ ...progresoInicial(), recordatorio: rec }).progreso.recordatorio.hora, 20);
 });

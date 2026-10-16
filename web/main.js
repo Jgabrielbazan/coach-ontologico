@@ -1,6 +1,7 @@
 import { GoogleGenAI } from '@google/genai';
 import { Camara, Microfono, Reproductor, listarMicrofonos } from './audio.js';
 import { AVATARES } from './avatares.js';
+import { escalonActual, escalonSuperado, resumenSemanal } from '../functions/practica.js';
 // Las reglas y el programa son los mismos que usa el servidor.
 import { NIVELES, PROGRAMA } from '../functions/programa.js';
 import {
@@ -127,6 +128,8 @@ const ui = {
   opcionesTrato: document.querySelectorAll('.opcion-trato'),
   selectorTrato: $('selector-trato'),
   tarjetaAyuda: $('tarjeta-ayuda'),
+  resumenSemana: $('resumen-semana'),
+  activarSemanal: $('activar-semanal'),
 };
 
 const NOMBRES_COACH = { femenino: 'Sofía', masculino: 'Tomás' };
@@ -142,6 +145,8 @@ const PROGRESO_INICIAL = {
   proposito: null,
   dias: [],
   lecciones: [],
+  cuaderno: [],
+  escalera: { escalones: [] },
   perfil: {},
   trato: null,
   derivacion: null,
@@ -277,6 +282,12 @@ function mostrarProgreso(datos) {
   mostrarAvance(p);
   mostrarProposito(p.proposito);
   mostrarSemana(p.dias);
+  ui.resumenSemana.textContent = `Resumen de la semana: ${resumenSemanal(p).cuerpo}`;
+  mostrarEscalera(p.escalera);
+  mostrarCuaderno(p.cuaderno);
+  if (p.recordatorio?.semanal !== undefined && document.activeElement !== ui.activarSemanal) {
+    ui.activarSemanal.checked = p.recordatorio.semanal;
+  }
   mostrarEvolucion(p.evolucion);
   for (const boton of ui.botonesCertificado) {
     boton.hidden = !p.evaluaciones.some((e) => e.nivel === Number(boton.dataset.nivel) && e.aprobado);
@@ -662,6 +673,175 @@ function mostrarLecciones(item, nivel, p) {
       }`;
   caja.replaceChildren(lista, requisitos);
 }
+
+// ---------- Tu escalera de exposición ----------
+
+/** Color del nivel de ansiedad: verde (0) a rojo (10). */
+const colorNivel = (nivel) => `hsl(${Math.round(140 - nivel * 13)} 70% 45%)`;
+
+function mostrarEscalera(escalera) {
+  const escalones = escalera?.escalones ?? [];
+  const actual = escalonActual(escalera);
+  const superados = escalones.filter(escalonSuperado).length;
+  $('resumen-escalera').textContent = escalones.length ? `${superados} de ${escalones.length} superados` : '';
+  $('vacio-escalera').hidden = escalones.length > 0;
+  $('formulario-intento').hidden = !escalones.length;
+  // De arriba (lo más difícil) hacia abajo, como una escalera.
+  $('lista-escalera').replaceChildren(
+    ...[...escalones].reverse().map((e) => {
+      const item = document.createElement('li');
+      item.className = escalonSuperado(e) ? 'superado' : e.id === actual?.id ? 'actual' : '';
+      const nivel = document.createElement('span');
+      nivel.className = 'escalon-nivel';
+      nivel.style.background = colorNivel(e.nivel);
+      nivel.textContent = e.nivel;
+      const texto = document.createElement('div');
+      texto.className = 'escalon-texto';
+      const titulo = document.createElement('span');
+      titulo.textContent = e.texto;
+      const meta = document.createElement('small');
+      const intentos = e.intentos ?? [];
+      meta.textContent = escalonSuperado(e)
+        ? `✓ superado · ${intentos.length} ${intentos.length === 1 ? 'intento' : 'intentos'} · ansiedad ${intentos.map((i) => i.antes).join(' → ')}`
+        : intentos.length
+          ? `${intentos.length} ${intentos.length === 1 ? 'intento' : 'intentos'} · ansiedad antes: ${intentos.map((i) => i.antes).join(' → ')}`
+          : e.id === actual?.id
+            ? '➜ Tu próximo escalón'
+            : 'Sin intentos todavía';
+      texto.append(titulo, meta);
+      const quitar = document.createElement('button');
+      quitar.type = 'button';
+      quitar.className = 'quitar-escalon';
+      quitar.textContent = '×';
+      quitar.setAttribute('aria-label', `Quitar «${e.texto}»`);
+      quitar.addEventListener('click', async () => {
+        if (!confirm(`¿Quitar «${e.texto}» de tu escalera?`)) return;
+        await llamar('quitarEscalon', { id: e.id }).catch((err) => actualizarEstado(err.message));
+      });
+      item.append(nivel, texto, quitar);
+      return item;
+    }),
+  );
+  const seleccion = $('escalon-intento');
+  // Se mantiene la elección, salvo que ese escalón ya esté superado: entonces, el que sigue.
+  const previo = escalones.find((e) => e.id === seleccion.value);
+  const elegido = previo && !escalonSuperado(previo) ? previo.id : actual?.id;
+  seleccion.replaceChildren(...escalones.map((e) => new Option(`${e.nivel}/10 · ${e.texto}`, e.id, false, e.id === elegido)));
+}
+
+for (const [rango, salida] of [['ansiedad-antes', 'salida-antes'], ['ansiedad-despues', 'salida-despues']]) {
+  $(rango).addEventListener('input', () => ($(salida).textContent = $(rango).value));
+}
+
+$('formulario-intento').addEventListener('submit', async (evento) => {
+  evento.preventDefault();
+  const boton = evento.submitter;
+  boton.disabled = true;
+  try {
+    const { mensaje } = await llamar('registrarExposicion', {
+      escalon: $('escalon-intento').value,
+      antes: Number($('ansiedad-antes').value),
+      despues: Number($('ansiedad-despues').value),
+      nota: $('nota-intento').value,
+      fecha: hoyLocal(),
+    });
+    $('nota-intento').value = '';
+    // El mensaje del servidor le habla al coach; aquí basta con confirmar y, si lo hubo, celebrar.
+    actualizarEstado(/superado/.test(mensaje) ? '¡Escalón superado! Excelente trabajo.' : 'Intento guardado: cada repetición cuenta.');
+  } catch (err) {
+    actualizarEstado(err.message);
+  } finally {
+    boton.disabled = false;
+  }
+});
+
+$('formulario-escalon').addEventListener('submit', async (evento) => {
+  evento.preventDefault();
+  const texto = $('texto-escalon').value.trim();
+  if (!texto) return;
+  try {
+    await llamar('agregarEscalon', { texto, nivel: Number($('nivel-escalon').value) });
+    $('texto-escalon').value = '';
+  } catch (err) {
+    actualizarEstado(err.message);
+  }
+});
+
+// ---------- Tu cuaderno de aprendizajes ----------
+
+function mostrarCuaderno(cuaderno = []) {
+  const hoy = hoyLocal();
+  const pendientes = cuaderno.filter((c) => c.repaso?.proximo <= hoy).length;
+  $('resumen-cuaderno').textContent = cuaderno.length
+    ? `${cuaderno.length} ${cuaderno.length === 1 ? 'distinción' : 'distinciones'}${pendientes ? ` · ${pendientes} para repasar` : ''}`
+    : '';
+  $('vacio-cuaderno').hidden = cuaderno.length > 0;
+  $('descargar-cuaderno').hidden = !cuaderno.length;
+  $('lista-cuaderno').replaceChildren(
+    ...[...cuaderno].reverse().map((c) => {
+      const item = document.createElement('li');
+      const titulo = document.createElement('strong');
+      titulo.textContent = c.distincion;
+      if (c.repaso?.proximo <= hoy) {
+        const marca = document.createElement('span');
+        marca.className = 'marca-repaso';
+        marca.textContent = 'repasar hoy';
+        titulo.append(' ', marca);
+      }
+      const meta = document.createElement('small');
+      meta.textContent = `Nivel ${c.nivel}${c.leccion ? ` · lección ${c.leccion}` : ''} · ${fechaCorta.format(new Date(c.fecha))}`;
+      const explicacion = document.createElement('p');
+      explicacion.textContent = c.explicacion;
+      item.append(titulo, meta, explicacion);
+      if (c.ejemplo) {
+        const ejemplo = document.createElement('p');
+        ejemplo.className = 'ejemplo';
+        ejemplo.textContent = `Ejemplo: ${c.ejemplo}`;
+        item.append(ejemplo);
+      }
+      return item;
+    }),
+  );
+}
+
+/** Abre el cuaderno en una página para imprimir o guardar como PDF. */
+function descargarCuaderno() {
+  const escapar = (t) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  const entradas = progresoActual.cuaderno ?? [];
+  const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Mi cuaderno · Coach Ontológico</title>
+<style>body{font-family:system-ui,sans-serif;max-width:720px;margin:32px auto;padding:0 20px;color:#1c1a33;line-height:1.5}
+h1{font-size:1.6rem;margin:0}.sub{color:#55537a;margin:4px 0 24px}h2{font-size:1rem;color:#6d28d9;margin:24px 0 8px;text-transform:uppercase;letter-spacing:.06em}
+article{border:1px solid #ddd;border-radius:12px;padding:12px 16px;margin:0 0 12px;break-inside:avoid}article h3{margin:0 0 4px;font-size:1.05rem}
+small{color:#77729a}.ej{color:#55537a;font-style:italic}</style></head><body>
+<h1>Mi cuaderno de aprendizajes</h1><p class="sub">${escapar(nombreUsuario)} · Coach Ontológico · ${new Date().toLocaleDateString('es')}</p>
+${Object.entries(entradas.reduce((grupos, c) => ({ ...grupos, [c.nivel]: [...(grupos[c.nivel] ?? []), c] }), {}))
+  .map(
+    ([nivel, lista]) =>
+      `<h2>Nivel ${nivel} · ${escapar(NIVELES[nivel])}</h2>` +
+      lista
+        .map(
+          (c) =>
+            `<article><h3>${escapar(c.distincion)}</h3><small>${c.leccion ? `Lección ${escapar(c.leccion)} · ` : ''}${new Date(c.fecha).toLocaleDateString('es')}</small><p>${escapar(c.explicacion)}</p>${c.ejemplo ? `<p class="ej">Ejemplo: ${escapar(c.ejemplo)}</p>` : ''}</article>`,
+        )
+        .join(''),
+  )
+  .join('')}
+<script>window.onload=()=>window.print()</script></body></html>`;
+  const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+  window.open(url, '_blank');
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+
+$('descargar-cuaderno').addEventListener('click', descargarCuaderno);
+
+ui.activarSemanal.addEventListener('change', async () => {
+  if (!ui.activarRecordatorio.checked) return;
+  try {
+    await guardarRecordatorio(true);
+  } catch (err) {
+    avisoRecordatorio(err.message);
+  }
+});
 
 // ---------- Tu perfil (lo que el coach fue conociendo) ----------
 
@@ -1104,7 +1284,29 @@ async function ejecutarHerramienta({ name, args = {} }) {
       };
     }
     case 'completar_leccion': {
-      const { mensaje } = await llamar('completarLeccion', { leccion: args.leccion, evidencia: args.evidencia, fecha: hoyLocal() });
+      const { mensaje } = await llamar('completarLeccion', {
+        leccion: args.leccion,
+        evidencia: args.evidencia,
+        aprendizaje: args.aprendizaje,
+        ejemplo: args.ejemplo,
+        fecha: hoyLocal(),
+      });
+      return { resultado: mensaje };
+    }
+    case 'guardar_escalera': {
+      const { mensaje } = await llamar('guardarEscalera', { escalones: args.escalones });
+      return { resultado: mensaje };
+    }
+    case 'registrar_exposicion': {
+      const { mensaje } = await llamar('registrarExposicion', { ...args, fecha: hoyLocal() });
+      return { resultado: mensaje };
+    }
+    case 'anotar_aprendizaje': {
+      const { mensaje } = await llamar('anotarAprendizaje', { ...args, fecha: hoyLocal() });
+      return { resultado: mensaje };
+    }
+    case 'registrar_repaso': {
+      const { mensaje } = await llamar('registrarRepaso', { id: args.id, resultado: args.resultado, fecha: hoyLocal() });
       return { resultado: mensaje };
     }
     case 'registrar_derivacion': {
@@ -1566,7 +1768,7 @@ async function guardarRecordatorio(activo) {
       });
     }
   }
-  await llamar('guardarRecordatorio', { activo, hora, zona, suscripcion: suscripcion?.toJSON() });
+  await llamar('guardarRecordatorio', { activo, hora, zona, semanal: ui.activarSemanal.checked, suscripcion: suscripcion?.toJSON() });
   if (!activo) await suscripcion?.unsubscribe();
 }
 

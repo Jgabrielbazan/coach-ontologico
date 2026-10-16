@@ -2411,3 +2411,183 @@ button {
   font: inherit;
   font-size: 0.8rem;
 }
+
+/* ---------- Resumen semanal ---------- */
+
+.resumen-semana {
+  margin-top: 8px !important;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--vidrio-fuerte);
+  font-size: 0.8rem !important;
+  color: var(--texto-suave);
+}
+
+/* ---------- Tu escalera ---------- */
+
+.escalera {
+  list-style: none;
+  margin: 4px 0 10px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.escalera li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--borde);
+  background: var(--vidrio-fuerte);
+}
+
+.escalera li.actual {
+  border-color: var(--actual-borde);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--violeta) 20%, transparent);
+}
+
+.escalera li.superado {
+  opacity: 0.75;
+}
+
+.escalon-nivel {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.escalon-texto {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  font-size: 0.86rem;
+}
+
+.escalon-texto small {
+  color: var(--texto-suave);
+  font-size: 0.75rem;
+}
+
+.escalera li.superado small {
+  color: var(--exito);
+}
+
+.quitar-escalon {
+  flex: none;
+  border: none;
+  background: none;
+  color: var(--texto-tenue);
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.fila-ansiedad {
+  display: flex;
+  gap: 12px;
+}
+
+.fila-ansiedad label {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.78rem;
+  color: var(--texto-suave);
+}
+
+.fila-ansiedad output {
+  font-weight: 700;
+  color: var(--texto);
+}
+
+.reflexion select,
+.fila-escalon input {
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--borde);
+  background: var(--vidrio-fuerte);
+  color: var(--texto);
+  font: inherit;
+  font-size: 0.85rem;
+}
+
+.fila-escalon {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.fila-escalon input:first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.fila-escalon input[type='number'] {
+  width: 58px;
+}
+
+.fila-escalon .boton-fantasma {
+  color: inherit;
+  font: inherit;
+  font-size: 0.82rem;
+}
+
+/* ---------- Tu cuaderno ---------- */
+
+.cuaderno {
+  list-style: none;
+  margin: 4px 0 10px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cuaderno li {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--borde);
+  background: var(--vidrio-fuerte);
+  font-size: 0.86rem;
+}
+
+.cuaderno small {
+  display: block;
+  color: var(--texto-tenue);
+  font-size: 0.72rem;
+}
+
+.cuaderno p {
+  margin: 4px 0 0 !important;
+  font-size: 0.86rem !important;
+}
+
+.cuaderno .ejemplo {
+  color: var(--texto-suave);
+  font-style: italic;
+}
+
+.marca-repaso {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--violeta) 18%, transparent);
+  color: var(--violeta);
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+#descargar-cuaderno {
+  color: inherit;
+  font: inherit;
+  font-size: 0.85rem;
+}
