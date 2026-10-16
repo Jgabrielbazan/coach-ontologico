@@ -2200,3 +2200,136 @@ button {
   color: var(--peligro);
   text-decoration: none;
 }
+
+/* ---------- Ajustes ---------- */
+
+.boton-ajustes,
+.boton-ajustes-lateral {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: inherit;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.boton-ajustes svg,
+.boton-ajustes-lateral svg {
+  width: 17px;
+  height: 17px;
+  fill: currentColor;
+  flex: none;
+}
+
+.boton-ajustes-lateral {
+  margin-top: 10px;
+  width: 100%;
+  justify-content: flex-start;
+  padding: 10px 14px;
+  border-radius: 14px;
+  text-align: left;
+}
+
+@media (max-width: 600px) {
+  .barra .boton-ajustes span {
+    display: none;
+  }
+}
+
+.dialogo-ajustes {
+  width: min(94vw, 480px);
+  max-height: 90vh;
+  padding: 18px 20px 16px;
+  border: 1px solid var(--borde);
+  border-radius: 24px;
+  background: var(--fondo);
+  color: var(--texto);
+  box-shadow: 0 30px 90px rgb(0 0 0 / 0.35);
+}
+
+.dialogo-ajustes::backdrop {
+  background: rgb(11 10 20 / 0.55);
+  backdrop-filter: blur(6px);
+}
+
+.dialogo-ajustes[open] {
+  animation: aparecer-celebracion 0.35s ease both;
+}
+
+.ajustes-cabecera {
+  position: relative;
+  margin-bottom: 10px;
+}
+
+.ajustes-cabecera .celebracion-cerrar {
+  top: -4px;
+  right: -6px;
+}
+
+.ajustes-cuerpo {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.titulo-seccion-ajustes {
+  margin: 4px 0 -4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--texto-tenue);
+}
+
+.ajustes-cuenta {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid var(--borde);
+  background: var(--vidrio-fuerte);
+}
+
+.ajustes-cuenta .titulo-seccion-ajustes {
+  margin: 0;
+}
+
+.cuenta-fila {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.cuenta-datos {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.cuenta-datos small {
+  color: var(--texto-suave);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cuenta-botones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cuenta-botones .boton-fantasma {
+  flex: 1;
+  color: inherit;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.boton-cerrar-sesion {
+  color: var(--peligro) !important;
+}

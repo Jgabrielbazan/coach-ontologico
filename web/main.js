@@ -338,12 +338,43 @@ for (const [id, avatar] of Object.entries(AVATARES)) {
 
 function mostrarAvatar(id) {
   const avatar = AVATARES[id];
-  ui.botonAvatar.innerHTML = avatar ? avatar.svg : '<span aria-hidden="true">+</span>';
-  ui.botonAvatar.classList.toggle('sin-avatar', !avatar);
+  for (const boton of [ui.botonAvatar, $('cuenta-avatar')]) {
+    boton.innerHTML = avatar ? avatar.svg : '<span aria-hidden="true">+</span>';
+    boton.classList.toggle('sin-avatar', !avatar);
+  }
   for (const opcion of document.querySelectorAll('.opcion-avatar')) {
     opcion.setAttribute('aria-checked', String(opcion.dataset.avatar === id));
   }
 }
+
+// ---------- Ajustes (ventana propia, se abre con el engranaje) ----------
+
+const dialogoAjustes = $('dialogo-ajustes');
+for (const boton of document.querySelectorAll('[data-abrir-ajustes]')) {
+  boton.addEventListener('click', () => dialogoAjustes.showModal());
+}
+for (const id of ['cerrar-ajustes', 'listo-ajustes']) $(id).addEventListener('click', () => dialogoAjustes.close());
+
+// Tu cuenta: cerrar sesión o entrar con otra cuenta de Google (abre el selector de cuentas).
+$('cuenta-avatar').addEventListener('click', () => {
+  dialogoAjustes.close();
+  abrirSelectorAvatar();
+});
+$('cerrar-sesion').addEventListener('click', () => {
+  dialogoAjustes.close();
+  if (activa) finalizar();
+  salir();
+});
+$('cambiar-cuenta').addEventListener('click', async () => {
+  dialogoAjustes.close();
+  if (activa) finalizar();
+  try {
+    await entrarConGoogle();
+  } catch (err) {
+    actualizarEstado(`No se pudo cambiar de cuenta: ${err.message}`);
+  }
+});
+dialogoAjustes.addEventListener('click', (e) => e.target === dialogoAjustes && dialogoAjustes.close());
 
 // ---------- Cómo te habla el coach (femenino, masculino o neutro) ----------
 
@@ -1700,6 +1731,8 @@ async function arrancar() {
     mostrarPantalla(Boolean(usuario));
     if (!usuario) return;
     ui.cuenta.textContent = usuario.email;
+    $('cuenta-correo').textContent = usuario.email;
+    $('cuenta-nombre').textContent = usuario.displayName || usuario.email.split('@')[0];
     nombreUsuario = usuario.displayName || usuario.email.split('@')[0];
     primerNombre = nombreUsuario.split(' ')[0];
     bienvenidaPendiente = true;

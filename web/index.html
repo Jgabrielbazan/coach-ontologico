@@ -90,6 +90,10 @@
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a1 1 0 0 1 1 1v8.6l2.3-2.3a1 1 0 1 1 1.4 1.4l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.4l2.3 2.3V4a1 1 0 0 1 1-1zM5 18h14a1 1 0 1 1 0 2H5a1 1 0 1 1 0-2z"/></svg>
             <span>Instalar en esta PC</span>
           </button>
+          <button type="button" class="boton-fantasma boton-ajustes" data-abrir-ajustes title="Ajustes">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.4 13a7.6 7.6 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.4 7.4 0 0 0-1.7-1L15 3.5h-4l-.4 2.5a7.4 7.4 0 0 0-1.7 1l-2.4-1-2 3.4L6.6 11a7.6 7.6 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7.4 7.4 0 0 0 1.7 1l.4 2.5h4l.4-2.5a7.4 7.4 0 0 0 1.7-1l2.4 1 2-3.4-2-1.6zM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg>
+            <span>Ajustes</span>
+          </button>
           <button type="button" id="boton-salir" class="boton-fantasma">Salir</button>
         </div>
       </header>
@@ -118,62 +122,10 @@
               <span><strong>Tomás</strong><small>Claro y sereno</small></span>
             </button>
           </div>
-          <details class="mas-ajustes">
-            <summary>Ajustes: recordatorio, forma de hablar y micrófono</summary>
-          <div class="recordatorio" id="bloque-recordatorio">
-            <label class="interruptor">
-              <input type="checkbox" id="activar-recordatorio" />
-              <span>Recordatorio diario en este aparato</span>
-            </label>
-            <div class="recordatorio-fila">
-              <select id="hora-recordatorio" aria-label="Hora del recordatorio">
-              <option value="6">06:00</option>
-              <option value="7">07:00</option>
-              <option value="8">08:00</option>
-              <option value="9">09:00</option>
-              <option value="10">10:00</option>
-              <option value="11">11:00</option>
-              <option value="12">12:00</option>
-              <option value="13">13:00</option>
-              <option value="14">14:00</option>
-              <option value="15">15:00</option>
-              <option value="16">16:00</option>
-              <option value="17">17:00</option>
-              <option value="18">18:00</option>
-              <option value="19">19:00</option>
-              <option value="20">20:00</option>
-              <option value="21">21:00</option>
-              <option value="22">22:00</option>
-              <option value="23">23:00</option>
-              </select>
-              <button type="button" id="probar-recordatorio" class="boton-fantasma" hidden>Probar</button>
-            </div>
-            <p id="nota-recordatorio" class="nota" hidden></p>
-          </div>
-          <label class="campo-microfono">
-            <span>Cómo te habla tu coach</span>
-            <select id="selector-trato">
-              <option value="">Que me lo pregunte</option>
-              <option value="femenino">En femenino</option>
-              <option value="masculino">En masculino</option>
-              <option value="neutro">Neutro (sin marcar género)</option>
-            </select>
-          </label>
-          <label class="campo-microfono">
-            <span>Forma de hablar</span>
-            <select id="selector-forma">
-              <option value="auto">Manos libres (detecta cuándo hablas)</option>
-              <option value="manual">Mantener para hablar (lugares con ruido)</option>
-            </select>
-          </label>
-          <p id="estado-voz" class="nota">La voz expresiva (risa, tono) se comprueba al empezar una sesión.</p>
-          <label class="campo-microfono">
-            <span>Micrófono</span>
-            <select id="selector-microfono">
-              <option value="">Predeterminado del sistema</option>
-            </select>
-          </label>
-          </details>
+          <button type="button" class="boton-fantasma boton-ajustes-lateral" data-abrir-ajustes>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.4 13a7.6 7.6 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.4 7.4 0 0 0-1.7-1L15 3.5h-4l-.4 2.5a7.4 7.4 0 0 0-1.7 1l-2.4-1-2 3.4L6.6 11a7.6 7.6 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7.4 7.4 0 0 0 1.7 1l.4 2.5h4l.4-2.5a7.4 7.4 0 0 0 1.7-1l2.4 1 2-3.4-2-1.6zM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg>
+            <span>Ajustes: cómo te habla, micrófono y recordatorio</span>
+          </button>
         </section>
 
         <section class="tarjeta tarjeta-proposito" id="tarjeta-proposito">
@@ -419,6 +371,84 @@
         </section>
       </main>
     </div>
+
+    <dialog class="dialogo-ajustes" id="dialogo-ajustes" aria-labelledby="titulo-ajustes">
+      <div class="ajustes-cabecera">
+        <h2 id="titulo-ajustes" class="titulo-dialogo">Ajustes</h2>
+        <button type="button" class="celebracion-cerrar" id="cerrar-ajustes" aria-label="Cerrar ajustes">×</button>
+      </div>
+      <div class="ajustes-cuerpo">
+        <section class="ajustes-cuenta" aria-labelledby="titulo-cuenta">
+          <h3 id="titulo-cuenta" class="titulo-seccion-ajustes">Tu cuenta</h3>
+          <div class="cuenta-fila">
+            <button type="button" class="avatar-usuario" id="cuenta-avatar" aria-label="Cambiar tu avatar" title="Cambiar tu avatar"></button>
+            <div class="cuenta-datos">
+              <strong id="cuenta-nombre"></strong>
+              <small id="cuenta-correo"></small>
+            </div>
+          </div>
+          <div class="cuenta-botones">
+            <button type="button" class="boton-fantasma" id="cambiar-cuenta">Entrar con otra cuenta</button>
+            <button type="button" class="boton-fantasma boton-cerrar-sesion" id="cerrar-sesion">Cerrar sesión</button>
+          </div>
+        </section>
+        <h3 class="titulo-seccion-ajustes">Sesiones con tu coach</h3>
+          <div class="recordatorio" id="bloque-recordatorio">
+            <label class="interruptor">
+              <input type="checkbox" id="activar-recordatorio" />
+              <span>Recordatorio diario en este aparato</span>
+            </label>
+            <div class="recordatorio-fila">
+              <select id="hora-recordatorio" aria-label="Hora del recordatorio">
+              <option value="6">06:00</option>
+              <option value="7">07:00</option>
+              <option value="8">08:00</option>
+              <option value="9">09:00</option>
+              <option value="10">10:00</option>
+              <option value="11">11:00</option>
+              <option value="12">12:00</option>
+              <option value="13">13:00</option>
+              <option value="14">14:00</option>
+              <option value="15">15:00</option>
+              <option value="16">16:00</option>
+              <option value="17">17:00</option>
+              <option value="18">18:00</option>
+              <option value="19">19:00</option>
+              <option value="20">20:00</option>
+              <option value="21">21:00</option>
+              <option value="22">22:00</option>
+              <option value="23">23:00</option>
+              </select>
+              <button type="button" id="probar-recordatorio" class="boton-fantasma" hidden>Probar</button>
+            </div>
+            <p id="nota-recordatorio" class="nota" hidden></p>
+          </div>
+          <label class="campo-microfono">
+            <span>Cómo te habla tu coach</span>
+            <select id="selector-trato">
+              <option value="">Que me lo pregunte</option>
+              <option value="femenino">En femenino</option>
+              <option value="masculino">En masculino</option>
+              <option value="neutro">Neutro (sin marcar género)</option>
+            </select>
+          </label>
+          <label class="campo-microfono">
+            <span>Forma de hablar</span>
+            <select id="selector-forma">
+              <option value="auto">Manos libres (detecta cuándo hablas)</option>
+              <option value="manual">Mantener para hablar (lugares con ruido)</option>
+            </select>
+          </label>
+          <p id="estado-voz" class="nota">La voz expresiva (risa, tono) se comprueba al empezar una sesión.</p>
+          <label class="campo-microfono">
+            <span>Micrófono</span>
+            <select id="selector-microfono">
+              <option value="">Predeterminado del sistema</option>
+            </select>
+          </label>
+      </div>
+      <button type="button" class="boton-fantasma cerrar-dialogo" id="listo-ajustes">Listo</button>
+    </dialog>
 
     <dialog class="dialogo-avatar" id="dialogo-avatar" aria-labelledby="titulo-avatar">
       <h2 id="titulo-avatar" class="titulo-dialogo">Elige tu avatar</h2>
