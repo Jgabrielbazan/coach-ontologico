@@ -572,3 +572,13 @@ test('grabadora: tiempo hablando y pausas largas medidos en el aparato', async (
   const voz = v('..........' + '#'.repeat(20) + '.'.repeat(15) + '#'.repeat(10) + '.....' + '#'.repeat(5) + '...');
   assert.deepEqual(medirPausas(voz), { tiempoHablando: 6, pausasLargas: 1 });
 });
+
+test('publicación: cada parámetro de las funciones tiene valor en .env.agent-ontologico', async () => {
+  const { readFileSync } = await import('node:fs');
+  const codigo = readFileSync(new URL('./index.js', import.meta.url), 'utf8');
+  const entorno = readFileSync(new URL('./.env.agent-ontologico', import.meta.url), 'utf8');
+  const parametros = [...codigo.matchAll(/define(?:String|Int)\('([A-Z_]+)'/g)].map((m) => m[1]);
+  assert.ok(parametros.length >= 5);
+  // El despliegue no interactivo falla si falta alguno, aunque tenga valor por defecto.
+  for (const nombre of parametros) assert.match(entorno, new RegExp(`^${nombre}=`, 'm'), `falta ${nombre}`);
+});
