@@ -392,6 +392,13 @@
             <button type="button" class="boton-fantasma boton-cerrar-sesion" id="cerrar-sesion">Cerrar sesión</button>
           </div>
         </section>
+        <section class="ajustes-admin" id="ajustes-admin" hidden>
+          <h3 class="titulo-seccion-ajustes">Administración</h3>
+          <button type="button" class="boton-fantasma boton-ajustes-lateral" id="abrir-usuarios">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm7 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM9 13c-3.3 0-7 1.6-7 4.5V20h14v-2.5C16 14.6 12.3 13 9 13zm7 0c-.5 0-1 0-1.6.1A5.3 5.3 0 0 1 18 17.5V20h4v-2.5c0-2.6-3.1-4.5-6-4.5z"/></svg>
+            <span>Usuarios y límites de uso</span>
+          </button>
+        </section>
         <h3 class="titulo-seccion-ajustes">Sesiones con tu coach</h3>
           <div class="recordatorio" id="bloque-recordatorio">
             <label class="interruptor">
@@ -448,6 +455,28 @@
           </label>
       </div>
       <button type="button" class="boton-fantasma cerrar-dialogo" id="listo-ajustes">Listo</button>
+    </dialog>
+
+    <dialog class="dialogo-ajustes dialogo-usuarios" id="dialogo-usuarios" aria-labelledby="titulo-usuarios">
+      <div class="ajustes-cabecera">
+        <h2 id="titulo-usuarios" class="titulo-dialogo">Usuarios</h2>
+        <button type="button" class="celebracion-cerrar" id="cerrar-usuarios" aria-label="Cerrar">×</button>
+      </div>
+      <p class="bajada-dialogo">
+        Invita a otras personas: entran con su cuenta de Google y cada una tiene su propio progreso y su límite de minutos por mes.
+        No ves sus conversaciones ni su perfil.
+      </p>
+      <form id="formulario-invitar" class="formulario-invitar">
+        <input type="email" id="correo-invitar" placeholder="correo@gmail.com" aria-label="Correo de Google" required />
+        <label class="campo-limite">
+          <input type="number" id="limite-invitar" min="0" max="3000" step="10" aria-label="Minutos por mes" />
+          <span>min/mes</span>
+        </label>
+        <button type="submit" class="boton-certificado">Invitar</button>
+      </form>
+      <p id="nota-usuarios" class="nota" hidden></p>
+      <p id="total-usuarios" class="texto-uso"></p>
+      <ul class="lista-usuarios" id="lista-usuarios"></ul>
     </dialog>
 
     <dialog class="dialogo-avatar" id="dialogo-avatar" aria-labelledby="titulo-avatar">

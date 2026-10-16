@@ -440,3 +440,22 @@ test('derivación clínica: se registra, se retoma en la sesión siguiente y sob
   assert.match(instruccionesSistema(con), /el coaching lo complementa, no lo reemplaza/);
   assert.ok(configuracionLive(p, { modo: 'practica', situacion: 'x' }).tools[0].functionDeclarations.some((f) => f.name === 'registrar_derivacion'));
 });
+
+test('acceso: administrador, invitados con su límite y cuentas sin acceso', async () => {
+  const { resolverAcceso, validarInvitacion, resumenUsuario } = await import('./acceso.js');
+  const admin = 'Jefe@Mail.com';
+  assert.deepEqual(resolverAcceso({ email: 'jefe@mail.com', email_verified: true }, admin, null), { acceso: true, admin: true, correo: 'jefe@mail.com' });
+  assert.equal(resolverAcceso({ email: 'otra@mail.com', email_verified: true }, admin, null).acceso, false);
+  assert.equal(resolverAcceso({ email: 'otra@mail.com', email_verified: false }, admin, { limiteMensualMin: 90 }).acceso, false);
+  assert.deepEqual(resolverAcceso({ email: 'Otra@mail.com', email_verified: true }, admin, { limiteMensualMin: 90 }), {
+    acceso: true, admin: false, correo: 'otra@mail.com', limiteMensualMin: 90,
+  });
+  assert.deepEqual(validarInvitacion({ email: ' Ana@Mail.com ' }), { correo: 'ana@mail.com', limiteMensualMin: 120 });
+  assert.equal(validarInvitacion({ email: 'ana@mail.com', limiteMensualMin: '300' }).limiteMensualMin, 300);
+  assert.equal(validarInvitacion({ email: 'ana@mail.com', limiteMensualMin: null }).limiteMensualMin, 120);
+  assert.throws(() => validarInvitacion({ email: 'no-es-correo' }), /correo válido/);
+  assert.throws(() => validarInvitacion({ email: 'ana@mail.com', limiteMensualMin: 99999 }), /entre 0 y/);
+  const ahora = new Date('2026-10-16T12:00:00Z');
+  const r = resumenUsuario({ nivel: 2, uso: { mes: '2026-10', segundos: 1800, sesiones: 3 }, sesiones: [{ fecha: '2026-10-14T10:00:00Z', resumen: 'x' }], perfil: { motivo: 'privado' } }, ahora);
+  assert.deepEqual(r, { nivel: 2, programaCompleto: false, minutosMes: 30, sesionesMes: 3, diasSemana: 0, ultimaSesion: '2026-10-14T10:00:00Z' });
+});

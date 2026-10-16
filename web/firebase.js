@@ -65,7 +65,9 @@ export async function llamar(nombre, datos = {}) {
     const { data } = await httpsCallable(functions, nombre)(datos);
     return data;
   } catch (err) {
-    // Los errores de las funciones llegan como "functions/xxx"; mostramos solo el texto.
-    throw new Error(err.message || 'Error del servidor');
+    // Los errores de las funciones llegan como "functions/xxx"; mostramos solo el texto y guardamos el código.
+    const error = new Error((err.message || 'Error del servidor').replace(/\s*\[\d+\]$/, ''));
+    error.code = err.code;
+    throw error;
   }
 }

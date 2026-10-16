@@ -376,6 +376,128 @@ $('cambiar-cuenta').addEventListener('click', async () => {
 });
 dialogoAjustes.addEventListener('click', (e) => e.target === dialogoAjustes && dialogoAjustes.close());
 
+// ---------- Acceso y panel de usuarios (solo el administrador) ----------
+
+/** Al entrar: si la cuenta no fue invitada, se sale y se explica en la pantalla de entrada. */
+async function comprobarAcceso() {
+  try {
+    const { admin, limiteMensualMin } = await llamar('quienSoy');
+    $('ajustes-admin').hidden = !admin;
+    // Cada persona tiene su propio límite de minutos por mes.
+    limites = { ...limites, mensualMin: limiteMensualMin };
+    try {
+      localStorage.setItem('limite-mensual', String(limiteMensualMin));
+    } catch {}
+    mostrarUso(progresoActual);
+  } catch (err) {
+    if (err.code !== 'functions/permission-denied') return;
+    ui.dialogoAvatar.close();
+    await salir();
+    ui.errorEntrar.textContent = err.message;
+    ui.errorEntrar.hidden = false;
+  }
+}
+
+const dialogoUsuarios = $('dialogo-usuarios');
+const fechaUsuarios = new Intl.DateTimeFormat('es', { day: 'numeric', month: 'short' });
+
+function avisoUsuarios(texto) {
+  $('nota-usuarios').hidden = !texto;
+  $('nota-usuarios').textContent = texto ?? '';
+}
+
+async function cargarUsuarios() {
+  $('lista-usuarios').replaceChildren();
+  $('total-usuarios').textContent = 'Cargando…';
+  try {
+    const { filas, limitePorDefecto } = await llamar('panelAdmin');
+    $('limite-invitar').placeholder = String(limitePorDefecto);
+    const minutos = filas.reduce((total, f) => total + (f.uso?.minutosMes ?? 0), 0);
+    $('total-usuarios').textContent =
+      `${filas.length} ${filas.length === 1 ? 'persona' : 'personas'} · ${minutos} min este mes entre todos ` +
+      `(≈ ${dinero.format(minutos * COSTO_POR_MINUTO_USD)} estimado)`;
+    $('lista-usuarios').replaceChildren(...filas.map(filaUsuario));
+  } catch (err) {
+    $('total-usuarios').textContent = '';
+    avisoUsuarios(err.message);
+  }
+}
+
+function filaUsuario(fila) {
+  const item = document.createElement('li');
+  const titulo = document.createElement('strong');
+  titulo.textContent = fila.correo + (fila.admin ? ' · tú (administrador)' : '');
+  const detalle = document.createElement('small');
+  const uso = fila.uso;
+  detalle.textContent = uso
+    ? `${uso.programaCompleto ? 'Programa completo' : `Nivel ${uso.nivel}`} · ${uso.minutosMes} de ${fila.limiteMensualMin} min este mes · ` +
+      `${uso.diasSemana} ${uso.diasSemana === 1 ? 'día practicado' : 'días practicados'} en 7 · última sesión ${uso.ultimaSesion ? fechaUsuarios.format(new Date(uso.ultimaSesion)) : '—'}`
+    : `Todavía no entró · límite ${fila.limiteMensualMin} min por mes`;
+  item.append(titulo, detalle);
+  if (!fila.admin) {
+    const acciones = document.createElement('div');
+    acciones.className = 'acciones-usuario';
+    const limite = document.createElement('input');
+    limite.type = 'number';
+    limite.min = '0';
+    limite.max = '3000';
+    limite.step = '10';
+    limite.value = String(fila.limiteMensualMin);
+    limite.setAttribute('aria-label', `Minutos por mes de ${fila.correo}`);
+    const guardar = document.createElement('button');
+    guardar.type = 'button';
+    guardar.className = 'boton-fantasma';
+    guardar.textContent = 'Guardar límite';
+    guardar.addEventListener('click', () => invitar(fila.correo, limite.value));
+    const quitar = document.createElement('button');
+    quitar.type = 'button';
+    quitar.className = 'boton-fantasma boton-cerrar-sesion';
+    quitar.textContent = 'Quitar acceso';
+    quitar.addEventListener('click', async () => {
+      if (!confirm(`¿Quitarle el acceso a ${fila.correo}? Sus datos se conservan por si vuelves a invitarle.`)) return;
+      try {
+        avisoUsuarios((await llamar('quitarInvitado', { email: fila.correo })).mensaje);
+        cargarUsuarios();
+      } catch (err) {
+        avisoUsuarios(err.message);
+      }
+    });
+    acciones.append(limite, guardar, quitar);
+    item.append(acciones);
+  }
+  return item;
+}
+
+async function invitar(email, limiteMensualMin) {
+  try {
+    avisoUsuarios((await llamar('invitarUsuario', { email, limiteMensualMin })).mensaje);
+    cargarUsuarios();
+    return true;
+  } catch (err) {
+    avisoUsuarios(err.message);
+    return false;
+  }
+}
+
+$('abrir-usuarios').addEventListener('click', () => {
+  dialogoAjustes.close();
+  avisoUsuarios('');
+  dialogoUsuarios.showModal();
+  cargarUsuarios();
+});
+$('cerrar-usuarios').addEventListener('click', () => dialogoUsuarios.close());
+dialogoUsuarios.addEventListener('click', (e) => e.target === dialogoUsuarios && dialogoUsuarios.close());
+$('formulario-invitar').addEventListener('submit', async (evento) => {
+  evento.preventDefault();
+  const boton = evento.submitter;
+  boton.disabled = true;
+  if (await invitar($('correo-invitar').value, $('limite-invitar').value || undefined)) {
+    $('correo-invitar').value = '';
+    $('limite-invitar').value = '';
+  }
+  boton.disabled = false;
+});
+
 // ---------- Cómo te habla el coach (femenino, masculino o neutro) ----------
 
 function mostrarTrato(trato) {
@@ -1736,6 +1858,7 @@ async function arrancar() {
     nombreUsuario = usuario.displayName || usuario.email.split('@')[0];
     primerNombre = nombreUsuario.split(' ')[0];
     bienvenidaPendiente = true;
+    comprobarAcceso();
     cargarMicrofonos();
     prepararRecordatorios();
     actualizarEstado();

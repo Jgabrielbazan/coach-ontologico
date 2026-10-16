@@ -37,6 +37,10 @@ en la PC y en el móvil, cada una por su cuenta. Entras con tu cuenta de Google 
 - **Coach con oficio:** contrato de sesión, preguntas poderosas, distinciones de la
   ontología del lenguaje. Dos perfiles: Sofía y Tomás.
 - **Tareas entre sesiones:** el coach deja una práctica, anotas cómo te fue y la retoma.
+- **Varias personas:** quien figura en `EMAIL_PERMITIDO` es el administrador; desde
+  Ajustes → «Usuarios y límites de uso» invita otras cuentas de Google, cada una con su
+  progreso y su límite de minutos por mes (`LIMITE_INVITADO_MIN`, 120 por defecto). El panel
+  muestra el uso de cada persona, nunca sus conversaciones ni su perfil.
 - **Tu avatar:** seis animalitos (gatita, coneja y leona; osito, lobo y tigre), tiernos o
   rudos. Lo eliges al entrar por primera vez, te saluda en cada inicio y se cambia tocándolo.
 - **Tu progreso:** barra del programa por niveles, que avanza también con los criterios

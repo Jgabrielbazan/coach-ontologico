@@ -1,6 +1,6 @@
 {
   "name": "coach-ontologico",
-  "version": "0.12.2",
+  "version": "0.13.0",
   "private": true,
   "description": "Coach ontológico por voz en tiempo real (Gemini Live). App personal para PC y móvil con progreso compartido en Firebase.",
   "type": "module",
